@@ -1,0 +1,371 @@
+name: "Bitflow-Script-Execution-Device"
+manufacturer: "TUB-FakIV-CIT"
+model: "Device-Bitflow-v1"
+labels:
+  - "device-bitflow"
+description: "Device that executes bitflow scripts."
+
+# this whole fucking file is derived from other device profiles
+# there was practically no real documentation on this whatsoever
+deviceResources:
+  # script execution configuration
+  ## script
+  -
+    name: "script"
+    description: "script which will be executed on the device"
+    properties:
+      value:
+        # default: just read data, do nothing and reset data
+        { type: "String", readWrite: "W", defaultValue: "noop()"}
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  ## status
+  -
+    name: "status"
+    description: "status of the script inside the script execution environment"
+    properties:
+      value:
+        { type: "String", readWrite: "R", defaultValue: "ready"}
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  ## execution start sample count
+  -
+    name: "sample_count"
+    description: "amount of samples required to start script run and therefore equally the number of input samples"
+    properties:
+      value:
+        { type: "Int32", readWrite: "RW", minimum: "-2147483648", maximum: "2147483647", defaultValue: "100" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  ## offload condition
+  -
+    name: "offloading_left_operand"
+    description: "left operand of dyadic offloading operator"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "offloading_operator"
+    description: "dyadic offloading operator describes condition when to offload"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "!=" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "offloading_right_operand"
+    description: "right operand of dyadic offloading operator"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  ## execute forever
+  -
+    name: "repeat"
+    description: "determines if script runs on a new set of input samples or stops"
+    properties:
+      value:
+        # device-simple config: { type: "Bool", readWrite: "RW" }
+        { type: "Bool", readWrite: "W", minimum: "0", maximum: "1", defaultValue: "0"}
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  # script input/output configuration (actuation configuration)
+  ## source device name
+  -
+    name: "input_device"
+    description: "name of another device whose complete readings are input of the script"
+    properties:
+      value:
+        # TODO maybe target an existing device to be able to output or input at least something
+        { type: "String", readWrite: "W", defaultValue: "device-default-input" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "output"
+    description: "result file of script"
+    properties:
+      value:
+        { type: "String", readWrite: "R", defaultValue: "EMPTY RESULTS" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  ## target device name
+  -
+    name: "output_device"
+    description: "name of another device that is acted upon"
+      value:
+        { type: "String", readWrite: "W", defaultValue: "device-default-output" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  ## target device command
+  -
+    name: "command"
+    description: "command of actuation_device that is executed if the actuation_condition is fulfilled"
+    properties:
+      value:
+        # TODO change default command
+        { type: "String", readWrite: "W", defaultValue: "ping" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  ## actuation condition
+  -
+    name: "actuation_left_operand"
+      description: "left operand of dyadic actuation operator"
+      properties:
+        value:
+          { type: "String", readWrite: "W", defaultValue: "" }
+        units:
+          { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "actuation_operator"
+    description: "dyadic actuation operator describes condition when to act on actuation_device, i.e. call above command"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "!=" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "actuation_right_operand"
+    description: "right operand of dyadic actuation operator"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+# ::commands for::
+# SE config
+# - script, status, sample_count, ..., repeat
+# - offloading_left_operand, offloading_operator, offloading_right_operand
+#
+# script i/o config
+# - input_device, actuation_device, command
+# - actuation_left_operand, actuation_operator, actuation_right_operand
+#
+# ::vs::
+# - script: { script=??? }
+# - input: { input_device=??? }
+# - actuation=???: { command=???, actuation_device=???, actuation_condition=??? }
+#
+# - execution*: { sample_count=100, repeat=false }
+# - offloading=false*: { offloading_left_operand=empty, offloading_operator=!=, offloading_right_operand=empty }
+# - status: { status }*
+# ultimately necessary are:
+# - script*
+# - input_device*
+# only necessary if actuation is desired:
+# - command*, actuation_device*, actuation_condition*
+
+deviceCommands:
+  # 1) script engine configuration commands
+  # 1.1) required configuration
+  # required: executable bitflow script; default: Noop() => causes error
+  -
+    name: "script"
+    set:
+      - { operation: "set", object: "script", parameter: "contents" }
+
+  # required: device name to draw input from; default: device-default-input => causes error
+  -
+    name: "input"
+    set:
+      - { operation: "set", object: "input_device", parameter: "device" }
+
+  # 1.2) optional configuration
+  # optional: configure actuation; default: command=ping, actuation_device=device-default-output,
+  #                                         actuation_left_operand="", actuation_operator="!="
+  #                                         actuation_right_operand="" => no actuation
+  -
+    name: "actuation"
+    set:
+      - { index: "1", operation: "set", object: "command", parameter: "command" }
+      - { index: "2", operation: "set", object: "actuation_device", parameter: "actuation_device" }
+      - { index: "3", operation: "set", object: "actuation_left_operand", parameter: "left_operand" }
+      - { index: "4", operation: "set", object: "actuation_operator", parameter: "operator" }
+      - { index: "5", operation: "set", object: "actuation_right_operand", parameter: "right_operand" }
+
+  # optional: configure offloading; default: left_operand="" operator="!=" right_operand="" => no offloading
+  -
+    name: "offloading"
+    set:
+      - { index: "1", operation: "set", object: "offloading_left_operand", parameter: "left_operand" }
+      - { index: "2", operation: "set", object: "offloading_operator", parameter: "operator" }
+      - { index: "3", operation: "set", object: "offloading_right_operand", parameter: "right_operand" }
+
+  # optional: configure execution; default: sample_count=100, repeat=false
+  -
+    name: "execution"
+    set:
+      - { index: "1", operation: "set", object: "sample_count", parameter: "sample_count" }
+      - { index: "2", operation: "set", object: "repeat", parameter: "repeat" }
+
+  # 2) script engine commands
+  -
+    name: "status"
+    get:
+      - { operation: "get", object: "status", parameter: "status" }
+
+  -
+    name: "results"
+    get:
+      - { operation: "get", object: "output", parameter: "output" }
+
+  -
+    name: "start"
+    set:
+      - { operation: "set", object: "status", parameter: "status" }
+
+  -
+    name: "stop"
+    set:
+      - { operation: "set", object: "status", parameter: "status" }
+
+coreCommands:
+# TODO think about correct http codes
+  -
+    name: "script"
+    put:
+      path: "/api/v1/device/{deviceId}/script"
+      parameterNames: ["contents"]
+      responses:
+        -
+          code: "204"
+          description: "load script into bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
+  -
+    name: "input"
+    put:
+      path: "/api/v1/device/{deviceId}/input"
+      parameterNames: ["device"]
+      responses:
+        -
+          code: "204"
+          description: "set input data of script in bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
+  -
+    name: "actuation"
+    put:
+      path: "/api/v1/device/{deviceId}/actuation"
+      parameterNames: ["command", "actuation_device", "left_operand", "operator", "right_operand"]
+      responses:
+        -
+          code: "204"
+          description: "configure actuation (command, device, condition) of script in bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: [
+
+  -
+    name: "offloading"
+    put:
+      path: "/api/v1/device/{deviceId}/offloading"
+      parameterNames: ["left_operand", "operator", "right_operator"]
+      responses:
+        -
+          code: "204"
+          description: "configure offloading condition of script in bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
+  -
+    name: "execution"
+    put:
+      path: "/api/v1/device/{deviceId}/offloading"
+      parameterNames: ["sample_count", "repeat"]
+      responses:
+        -
+          code: "204"
+          description: "configure execution (start condition, repeated execution) of script in bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
+    -
+      name: "status"
+      get:
+        path: "/api/v1/device/{deviceId}/status"
+        responses:
+          -
+            code: "200"
+            description: "get execution status of script in bitflow script execution engine"
+            expectedValues: ["status"]
+          -
+            code: "500"
+            description: "internal server error"
+            expectedValues: []
+
+    -
+      name: "results"
+      get:
+        path: "/api/v1/device/{deviceId}/results"
+        responses:
+          -
+            code: "200"
+            description: "get final data sink of script in bitflow script execution engine"
+            expectedValues: ["results"]
+          -
+            code: "500"
+            description: "internal server error"
+            expectedValues: []
+
+    -
+      name: "start"
+      put:
+        path: "/api/v1/device/{deviceId}/start"
+        parameterNames: ["status"]
+        responses:
+          -
+            code: "204"
+            description: "start collection of data for script in bitflow script execution engine"
+            expectedValues: []
+          -
+            code: "500"
+            description: "internal server error"
+            expectedValues: []
+
+      -
+        name: "stop"
+        put:
+          path: "/api/v1/device/{deviceId}/stop"
+          parameterNames: ["status"]
+          responses:
+            -
+              code: "204"
+              description: "shut down a script in bitflow script execution engine"
+              expectedValues: []
+            -
+              code: "500"
+              description: "internal server error"
+              expectedValues: []
