@@ -87,7 +87,7 @@ deviceResources:
     properties:
       value:
         # TODO maybe target an existing device to be able to output or input at least something
-        { type: "String", readWrite: "W", defaultValue: "device-default-input" }
+        { type: "String", readWrite: "W", defaultValue: "device-empty" }
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
@@ -105,7 +105,7 @@ deviceResources:
     name: "output_device"
     description: "name of another device that is acted upon"
       value:
-        { type: "String", readWrite: "W", defaultValue: "device-default-output" }
+        { type: "String", readWrite: "W", defaultValue: "device-empty" }
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
@@ -180,14 +180,14 @@ deviceCommands:
     set:
       - { operation: "set", object: "script", parameter: "contents" }
 
-  # required: device name to draw input from; default: device-default-input => causes error
+  # required: device name to draw input from; default: device-empty => causes error
   -
     name: "input"
     set:
       - { operation: "set", object: "input_device", parameter: "device" }
 
   # 1.2) optional configuration
-  # optional: configure actuation; default: command=ping, actuation_device=device-default-output,
+  # optional: configure actuation; default: command=ping, actuation_device=device-empty,
   #                                         actuation_left_operand="", actuation_operator="!="
   #                                         actuation_right_operand="" => no actuation
   -
