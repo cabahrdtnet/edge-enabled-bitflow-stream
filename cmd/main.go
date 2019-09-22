@@ -9,8 +9,8 @@
 package main
 
 import (
-    "gitub.com/datenente/device-bitflow"
-    "gitub.com/datenente/device-bitflow/driver"
+    "github.com/datenente/device-bitflow"
+    "github.com/datenente/device-bitflow/driver"
 	"github.com/edgexfoundry/device-sdk-go/pkg/startup"
 )
 
