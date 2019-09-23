@@ -102,8 +102,9 @@ deviceResources:
 
   ## target device name
   -
-    name: "output_device"
+    name: "actuation_device"
     description: "name of another device that is acted upon"
+    properties:
       value:
         { type: "String", readWrite: "W", defaultValue: "device-empty" }
       units:
@@ -123,12 +124,12 @@ deviceResources:
   ## actuation condition
   -
     name: "actuation_left_operand"
-      description: "left operand of dyadic actuation operator"
-      properties:
-        value:
-          { type: "String", readWrite: "W", defaultValue: "" }
-        units:
-          { type: "String", readWrite: "R", defaultValue: "" }
+    description: "left operand of dyadic actuation operator"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
 
   -
     name: "actuation_operator"
@@ -280,7 +281,7 @@ coreCommands:
         -
           code: "500"
           description: "internal server error"
-          expectedValues: [
+          expectedValues: []
 
   -
     name: "offloading"
@@ -312,60 +313,60 @@ coreCommands:
           description: "internal server error"
           expectedValues: []
 
-    -
-      name: "status"
-      get:
-        path: "/api/v1/device/{deviceId}/status"
-        responses:
-          -
-            code: "200"
-            description: "get execution status of script in bitflow script execution engine"
-            expectedValues: ["status"]
-          -
-            code: "500"
-            description: "internal server error"
-            expectedValues: []
+  -
+    name: "status"
+    get:
+      path: "/api/v1/device/{deviceId}/status"
+      responses:
+        -
+          code: "200"
+          description: "get execution status of script in bitflow script execution engine"
+          expectedValues: ["status"]
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
 
-    -
-      name: "results"
-      get:
-        path: "/api/v1/device/{deviceId}/results"
-        responses:
-          -
-            code: "200"
-            description: "get final data sink of script in bitflow script execution engine"
-            expectedValues: ["results"]
-          -
-            code: "500"
-            description: "internal server error"
-            expectedValues: []
+  -
+    name: "results"
+    get:
+      path: "/api/v1/device/{deviceId}/results"
+      responses:
+        -
+          code: "200"
+          description: "get final data sink of script in bitflow script execution engine"
+          expectedValues: ["results"]
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
 
-    -
-      name: "start"
-      put:
-        path: "/api/v1/device/{deviceId}/start"
-        parameterNames: ["status"]
-        responses:
-          -
-            code: "204"
-            description: "start collection of data for script in bitflow script execution engine"
-            expectedValues: []
-          -
-            code: "500"
-            description: "internal server error"
-            expectedValues: []
+  -
+    name: "start"
+    put:
+      path: "/api/v1/device/{deviceId}/start"
+      parameterNames: ["status"]
+      responses:
+        -
+          code: "204"
+          description: "start collection of data for script in bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
 
-      -
-        name: "stop"
-        put:
-          path: "/api/v1/device/{deviceId}/stop"
-          parameterNames: ["status"]
-          responses:
-            -
-              code: "204"
-              description: "shut down a script in bitflow script execution engine"
-              expectedValues: []
-            -
-              code: "500"
-              description: "internal server error"
-              expectedValues: []
+  -
+    name: "stop"
+    put:
+      path: "/api/v1/device/{deviceId}/stop"
+      parameterNames: ["status"]
+      responses:
+        -
+          code: "204"
+          description: "shut down a script in bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
