@@ -31,4 +31,4 @@ test:
 	$(GO) test -coverprofile=coverage.out ./...
 
 clean:
-	rm -f $(MICROSERVICES)
+	rm -f $(MICROSERVICES) $(MICROSERVICES).log
