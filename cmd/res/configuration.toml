@@ -1,12 +1,12 @@
 [Writable]
-LogLevel = 'INFO'
+LogLevel = 'DEBUG'
 
 [Service]
 Host = "localhost"
-Port = 49990
+Port = 49995
 ConnectRetries = 20
 Labels = []
-OpenMsg = "device simple started"
+OpenMsg = "device-bitflow started"
 Timeout = 5000
 EnableAsyncReadings = true
 AsyncBufferSize = 16
@@ -52,23 +52,23 @@ FailWaitTime = 10
 
 [Logging]
 EnableRemote = false
-File = "./device-simple.log"
+File = "./device-bitflow.log"
 
 # Pre-define Devices
 [[DeviceList]]
-  Name = "Simple-Device01"
-  Profile = "Simple-Device"
-  Description = "Example of Simple Device"
+  Name = "Bitflow-Script-Test-Device"
+  Profile = "Bitflow-Script-Execution-Device"
+  Description = "A full-manual bitflow script test device."
   Labels = [ "industrial" ]
   [DeviceList.Protocols]
     [DeviceList.Protocols.other]
-      Address = "simple01"
+      Address = "bitflow_script_test_device"
       Port = "300"
-  [[DeviceList.AutoEvents]]
-    Frequency = "10s"
-    OnChange = false
-    Resource = "Switch"
-  [[DeviceList.AutoEvents]]
-    Frequency = "30s"
-    OnChange = false
-    Resource = "Image"
+#  [[DeviceList.AutoEvents]]
+#    Frequency = "10s"
+#    OnChange = false
+#    Resource = "Switch"
+#  [[DeviceList.AutoEvents]]
+#    Frequency = "30s"
+#    OnChange = false
+#    Resource = "Image"
