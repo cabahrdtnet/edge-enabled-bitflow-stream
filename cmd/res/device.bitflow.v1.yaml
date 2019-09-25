@@ -30,16 +30,6 @@ deviceResources:
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
-  ## execution start sample count
-  -
-    name: "sample_count"
-    description: "amount of samples required to start script run and therefore equally the number of input samples"
-    properties:
-      value:
-        { type: "Int32", readWrite: "RW", minimum: "-2147483648", maximum: "2147483647", defaultValue: "100" }
-      units:
-        { type: "String", readWrite: "R", defaultValue: "" }
-
   ## offload condition
   -
     name: "offloading_left_operand"
@@ -68,35 +58,15 @@ deviceResources:
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
-  ## execute forever
-  -
-    name: "repeat"
-    description: "determines if script runs on a new set of input samples or stops"
-    properties:
-      value:
-        # device-simple config: { type: "Bool", readWrite: "RW" }
-        { type: "Bool", readWrite: "W", minimum: "0", maximum: "1", defaultValue: "0"}
-      units:
-        { type: "String", readWrite: "R", defaultValue: "" }
-
   # script input/output configuration (actuation configuration)
   ## source device name
   -
-    name: "input_device"
-    description: "name of another device whose complete readings are input of the script"
+    name: "input_device_profile"
+    description: "name of device profile as placeholder for devices whose readings are streamed to the script"
     properties:
       value:
         # TODO maybe target an existing device to be able to output or input at least something
         { type: "String", readWrite: "W", defaultValue: "device-empty" }
-      units:
-        { type: "String", readWrite: "R", defaultValue: "" }
-
-  -
-    name: "output"
-    description: "result file of script"
-    properties:
-      value:
-        { type: "String", readWrite: "R", defaultValue: "EMPTY RESULTS" }
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
@@ -208,23 +178,11 @@ deviceCommands:
       - { index: "2", operation: "set", object: "offloading_operator", parameter: "operator" }
       - { index: "3", operation: "set", object: "offloading_right_operand", parameter: "right_operand" }
 
-  # optional: configure execution; default: sample_count=100, repeat=false
-  -
-    name: "execution"
-    set:
-      - { index: "1", operation: "set", object: "sample_count", parameter: "sample_count" }
-      - { index: "2", operation: "set", object: "repeat", parameter: "repeat" }
-
   # 2) script engine commands
   -
     name: "status"
     get:
       - { operation: "get", object: "status", parameter: "status" }
-
-  -
-    name: "results"
-    get:
-      - { operation: "get", object: "output", parameter: "output" }
 
   -
     name: "start"
@@ -299,21 +257,6 @@ coreCommands:
           expectedValues: []
 
   -
-    name: "execution"
-    put:
-      path: "/api/v1/device/{deviceId}/offloading"
-      parameterNames: ["sample_count", "repeat"]
-      responses:
-        -
-          code: "204"
-          description: "configure execution (start condition, repeated execution) of script in bitflow script execution engine"
-          expectedValues: []
-        -
-          code: "500"
-          description: "internal server error"
-          expectedValues: []
-
-  -
     name: "status"
     get:
       path: "/api/v1/device/{deviceId}/status"
@@ -322,20 +265,6 @@ coreCommands:
           code: "200"
           description: "get execution status of script in bitflow script execution engine"
           expectedValues: ["status"]
-        -
-          code: "500"
-          description: "internal server error"
-          expectedValues: []
-
-  -
-    name: "results"
-    get:
-      path: "/api/v1/device/{deviceId}/results"
-      responses:
-        -
-          code: "200"
-          description: "get final data sink of script in bitflow script execution engine"
-          expectedValues: ["results"]
         -
           code: "500"
           description: "internal server error"
