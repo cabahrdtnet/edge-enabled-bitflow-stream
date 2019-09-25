@@ -61,7 +61,7 @@ deviceResources:
   # script input/output configuration (actuation configuration)
   ## source device name
   -
-    name: "input_device_profile"
+    name: "input"
     description: "name of device profile as placeholder for devices whose readings are streamed to the script"
     properties:
       value:
@@ -149,13 +149,13 @@ deviceCommands:
   -
     name: "script"
     set:
-      - { operation: "set", object: "script", parameter: "contents" }
+      - { operation: "set", object: "script", parameter: "script" }
 
   # required: device name to draw input from; default: device-empty => causes error
   -
     name: "input"
     set:
-      - { operation: "set", object: "input_device", parameter: "device" }
+      - { operation: "set", object: "input", parameter: "input" }
 
   # 1.2) optional configuration
   # optional: configure actuation; default: command=ping, actuation_device=device-empty,
@@ -166,17 +166,17 @@ deviceCommands:
     set:
       - { index: "1", operation: "set", object: "command", parameter: "command" }
       - { index: "2", operation: "set", object: "actuation_device", parameter: "actuation_device" }
-      - { index: "3", operation: "set", object: "actuation_left_operand", parameter: "left_operand" }
-      - { index: "4", operation: "set", object: "actuation_operator", parameter: "operator" }
-      - { index: "5", operation: "set", object: "actuation_right_operand", parameter: "right_operand" }
+      - { index: "3", operation: "set", object: "actuation_left_operand", parameter: "actuation_left_operand" }
+      - { index: "4", operation: "set", object: "actuation_operator", parameter: "actuation_operator" }
+      - { index: "5", operation: "set", object: "actuation_right_operand", parameter: "actuation_right_operand" }
 
   # optional: configure offloading; default: left_operand="" operator="!=" right_operand="" => no offloading
   -
     name: "offloading"
     set:
-      - { index: "1", operation: "set", object: "offloading_left_operand", parameter: "left_operand" }
-      - { index: "2", operation: "set", object: "offloading_operator", parameter: "operator" }
-      - { index: "3", operation: "set", object: "offloading_right_operand", parameter: "right_operand" }
+      - { index: "1", operation: "set", object: "offloading_left_operand", parameter: "offloading_left_operand" }
+      - { index: "2", operation: "set", object: "offloading_operator", parameter: "offloading_operator" }
+      - { index: "3", operation: "set", object: "offloading_right_operand", parameter: "offloading_right_operand" }
 
   # 2) script engine commands
   -
@@ -200,7 +200,7 @@ coreCommands:
     name: "script"
     put:
       path: "/api/v1/device/{deviceId}/script"
-      parameterNames: ["contents"]
+      parameterNames: ["script"]
       responses:
         -
           code: "204"
@@ -215,7 +215,7 @@ coreCommands:
     name: "input"
     put:
       path: "/api/v1/device/{deviceId}/input"
-      parameterNames: ["device"]
+      parameterNames: ["input"]
       responses:
         -
           code: "204"
@@ -230,7 +230,7 @@ coreCommands:
     name: "actuation"
     put:
       path: "/api/v1/device/{deviceId}/actuation"
-      parameterNames: ["command", "actuation_device", "left_operand", "operator", "right_operand"]
+      parameterNames: ["command", "actuation_device", "actuation_left_operand", "actuation_operator", "actuation_right_operand"]
       responses:
         -
           code: "204"
@@ -245,7 +245,7 @@ coreCommands:
     name: "offloading"
     put:
       path: "/api/v1/device/{deviceId}/offloading"
-      parameterNames: ["left_operand", "operator", "right_operator"]
+      parameterNames: ["offloading_left_operand", "offloading_operator", "offloading_right_operand"]
       responses:
         -
           code: "204"
