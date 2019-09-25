@@ -1,4 +1,4 @@
-.PHONY: build test clean docker
+.PHONY: build run test clean docker
 
 GO=CGO_ENABLED=0 GO111MODULE=on go
 
@@ -24,6 +24,9 @@ docker:
 		-t datenente/docker-device-bitflow:$(GIT_SHA) \
 		-t datenente/docker-device-bitflow:$(VERSION)-dev \
 		.
+
+run:
+	cd cmd ; ./device-bitflow --registry=consul://localhost:8500 --confdir=./res/
 
 test:
 	$(GO) vet ./...
