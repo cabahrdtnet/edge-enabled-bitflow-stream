@@ -5,32 +5,34 @@ labels:
   - "device-bitflow"
 description: "Device that executes bitflow scripts."
 
-# this whole fucking file is derived from other device profiles
-# there was practically no real documentation on this whatsoever
 deviceResources:
-  # script execution configuration
-  ## script
-  -
-    name: "script"
-    description: "script which will be executed on the device"
-    properties:
-      value:
-        # default: just read data, do nothing and reset data
-        { type: "String", readWrite: "W", defaultValue: "noop()"}
-      units:
-        { type: "String", readWrite: "R", defaultValue: "" }
-
-  ## status
   -
     name: "status"
     description: "status of the script inside the script execution environment"
     properties:
       value:
-        { type: "String", readWrite: "R", defaultValue: "ready"}
+        { type: "String", readWrite: "R", defaultValue: ""}
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
-  ## offload condition
+  -
+    name: "contents"
+    description: "file contents of script which will be executed on the device"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "input -> output"}
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "device_profile"
+    description: "name of device profile as placeholder for devices whose readings are streamed to the script"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
   -
     name: "offloading_left_operand"
     description: "left operand of dyadic offloading operator"
@@ -45,7 +47,7 @@ deviceResources:
     description: "dyadic offloading operator describes condition when to offload"
     properties:
       value:
-        { type: "String", readWrite: "W", defaultValue: "!=" }
+        { type: "String", readWrite: "W", defaultValue: "" }
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
@@ -58,19 +60,6 @@ deviceResources:
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
-  # script input/output configuration (actuation configuration)
-  ## source device name
-  -
-    name: "input"
-    description: "name of device profile as placeholder for devices whose readings are streamed to the script"
-    properties:
-      value:
-        # TODO maybe target an existing device to be able to output or input at least something
-        { type: "String", readWrite: "W", defaultValue: "device-empty" }
-      units:
-        { type: "String", readWrite: "R", defaultValue: "" }
-
-  ## target device name
   -
     name: "actuation_device"
     description: "name of another device that is acted upon"
@@ -80,18 +69,15 @@ deviceResources:
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
-  ## target device command
   -
     name: "command"
     description: "command of actuation_device that is executed if the actuation_condition is fulfilled"
     properties:
       value:
-        # TODO change default command
-        { type: "String", readWrite: "W", defaultValue: "ping" }
+        { type: "String", readWrite: "W", defaultValue: "" }
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
-  ## actuation condition
   -
     name: "actuation_left_operand"
     description: "left operand of dyadic actuation operator"
@@ -119,48 +105,24 @@ deviceResources:
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
-# ::commands for::
-# SE config
-# - script, status, sample_count, ..., repeat
-# - offloading_left_operand, offloading_operator, offloading_right_operand
-#
-# script i/o config
-# - input_device, actuation_device, command
-# - actuation_left_operand, actuation_operator, actuation_right_operand
-#
-# ::vs::
-# - script: { script=??? }
-# - input: { input_device=??? }
-# - actuation=???: { command=???, actuation_device=???, actuation_condition=??? }
-#
-# - execution*: { sample_count=100, repeat=false }
-# - offloading=false*: { offloading_left_operand=empty, offloading_operator=!=, offloading_right_operand=empty }
-# - status: { status }*
-# ultimately necessary are:
-# - script*
-# - input_device*
-# only necessary if actuation is desired:
-# - command*, actuation_device*, actuation_condition*
-
 deviceCommands:
-  # 1) script engine configuration commands
-  # 1.1) required configuration
-  # required: executable bitflow script; default: Noop() => causes error
+  -
+    name: "control"
+    get:
+      - { operation: "get", object: "status", parameter: "status" }
+    set:
+      - { operation: "set", object: "status", parameter: "status" }
+
   -
     name: "script"
     set:
-      - { operation: "set", object: "script", parameter: "script" }
+      - { operation: "set", object: "contents", parameter: "contents" }
 
-  # required: device name to draw input from; default: device-empty => causes error
   -
     name: "input"
     set:
-      - { operation: "set", object: "input", parameter: "input" }
+      - { operation: "set", object: "device_profile", parameter: "device_profile" }
 
-  # 1.2) optional configuration
-  # optional: configure actuation; default: command=ping, actuation_device=device-empty,
-  #                                         actuation_left_operand="", actuation_operator="!="
-  #                                         actuation_right_operand="" => no actuation
   -
     name: "actuation"
     set:
@@ -170,7 +132,6 @@ deviceCommands:
       - { index: "4", operation: "set", object: "actuation_operator", parameter: "actuation_operator" }
       - { index: "5", operation: "set", object: "actuation_right_operand", parameter: "actuation_right_operand" }
 
-  # optional: configure offloading; default: left_operand="" operator="!=" right_operand="" => no offloading
   -
     name: "offloading"
     set:
@@ -178,24 +139,34 @@ deviceCommands:
       - { index: "2", operation: "set", object: "offloading_operator", parameter: "offloading_operator" }
       - { index: "3", operation: "set", object: "offloading_right_operand", parameter: "offloading_right_operand" }
 
-  # 2) script engine commands
-  -
-    name: "status"
-    get:
-      - { operation: "get", object: "status", parameter: "status" }
-
-  -
-    name: "start"
-    set:
-      - { operation: "set", object: "status", parameter: "status" }
-
-  -
-    name: "stop"
-    set:
-      - { operation: "set", object: "status", parameter: "status" }
-
-coreCommands:
 # TODO think about correct http codes
+coreCommands:
+  -
+    name: "control"
+    get:
+      path: "/api/v1/device/{deviceId}/control"
+      responses:
+        -
+          code: "200"
+          description: "get current status of bitflow script execution engine"
+          expectedValues: ["status"]
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+    put:
+      path: "/api/v1/device/{deviceId}/control"
+      parameterNames: ["status"]
+      responses:
+        -
+          code: "204"
+          description: "control bitflow script execution engine by setting next desired status"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
   -
     name: "script"
     put:
@@ -215,11 +186,11 @@ coreCommands:
     name: "input"
     put:
       path: "/api/v1/device/{deviceId}/input"
-      parameterNames: ["input"]
+      parameterNames: ["device_profile"]
       responses:
         -
           code: "204"
-          description: "set input data of script in bitflow script execution engine"
+          description: "set input data (device profile name) of script in bitflow script execution engine"
           expectedValues: []
         -
           code: "500"
@@ -250,50 +221,6 @@ coreCommands:
         -
           code: "204"
           description: "configure offloading condition of script in bitflow script execution engine"
-          expectedValues: []
-        -
-          code: "500"
-          description: "internal server error"
-          expectedValues: []
-
-  -
-    name: "status"
-    get:
-      path: "/api/v1/device/{deviceId}/status"
-      responses:
-        -
-          code: "200"
-          description: "get execution status of script in bitflow script execution engine"
-          expectedValues: ["status"]
-        -
-          code: "500"
-          description: "internal server error"
-          expectedValues: []
-
-  -
-    name: "start"
-    put:
-      path: "/api/v1/device/{deviceId}/start"
-      parameterNames: ["status"]
-      responses:
-        -
-          code: "204"
-          description: "start collection of data for script in bitflow script execution engine"
-          expectedValues: []
-        -
-          code: "500"
-          description: "internal server error"
-          expectedValues: []
-
-  -
-    name: "stop"
-    put:
-      path: "/api/v1/device/{deviceId}/stop"
-      parameterNames: ["status"]
-      responses:
-        -
-          code: "204"
-          description: "shut down a script in bitflow script execution engine"
           expectedValues: []
         -
           code: "500"
