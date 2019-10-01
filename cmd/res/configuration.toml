@@ -1,10 +1,8 @@
 [Writable]
-LogLevel = 'DEBUG'
+LogLevel = 'INFO'
 
 [Service]
-# this apparently needs to be updated every time the network interface changes
-# localhost doesn't seem to work
-Host = "127.0.0.1"
+Host = "localhost"
 Port = 49995
 ConnectRetries = 20
 Labels = []
