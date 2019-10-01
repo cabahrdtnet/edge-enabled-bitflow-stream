@@ -9,9 +9,15 @@ import (
 	"time"
 )
 
+// layout
+const (
+	tLayout = "2006-01-02T15:04:05.000000000"
+	layout  = "2006-01-02 15:04:05.000000000"
+)
+
 // current time for timestamps
 var (
-	now = time.Now().UTC().Format("2006-01-02 15:04:05.000000000")
+	now = time.Now().UTC().Format(layout)
 )
 
 // header for stream based on readings
@@ -25,11 +31,12 @@ func Header(readings []models.Reading) string {
 
 // convert EdgeX event bitflow csv sample
 func Etos(e models.Event) (string, error) {
-	if cmp.Equal(e, models.Event{}, cmpopts.IgnoreUnexported(models.Event{})){
+	if cmp.Equal(e, models.Event{}, cmpopts.IgnoreUnexported(models.Event{})) {
 		return "", fmt.Errorf("event is empty")
 	}
 
-	origin := time.Unix(0, e.Origin * 1000 * 1000).UTC().Format("2006-01-02T15:04:05.000000000")
+	nanos := e.Origin * 1000 * 1000
+	origin := time.Unix(0, nanos).UTC().Format(tLayout)
 	sample := now
 	tags := ",origin=" + origin + " " + "device=" + e.Device
 	sample += tags
@@ -57,26 +64,24 @@ func Stoe(deviceName string, sample string, header string) (models.Event, error)
 	metrics := entries[2:]
 	metricNames := headerEntries[2:]
 
-	time, err := time.Parse("2006-01-02 15:04:05.000000000", now)
+	eventTime, err := time.Parse(layout, now)
 	if err != nil {
 		return models.Event{}, fmt.Errorf("parsing error in Stoe: %s", err.Error())
 	}
 
 	readings := []models.Reading{}
-	for index, _ := range metricNames {
+	for index := range metricNames {
 		reading := models.Reading{
-			Name:        metricNames[index],
-			Value:       metrics[index],
-			Origin:      time.UnixNano() / 1000 / 1000,
+			Name:   metricNames[index],
+			Value:  metrics[index],
+			Origin: eventTime.UnixNano() / 1000 / 1000,
 		}
 		readings = append(readings, reading)
 	}
 
-	// where do we get the device name from?
-	// Answer: the device
 	return models.Event{
 		Device:   deviceName,
-		Origin:   time.UnixNano() / 1000 / 1000,
+		Origin:   eventTime.UnixNano() / 1000 / 1000,
 		Readings: readings,
 	}, nil
 }
