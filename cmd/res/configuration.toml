@@ -1,8 +1,8 @@
 [Writable]
-LogLevel = 'INFO'
+LogLevel = 'DEBUG'
 
 [Service]
-Host = "localhost"
+Host = "192.168.178.20"
 Port = 49995
 ConnectRetries = 20
 Labels = []
