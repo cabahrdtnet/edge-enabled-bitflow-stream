@@ -4,7 +4,6 @@ import (
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"os"
 	"testing"
 	"time"
 )
@@ -32,11 +31,6 @@ var (
 			caninecount},
 	}
 )
-
-func TestMain(m *testing.M) {
-	code := m.Run()
-	os.Exit(code)
-}
 
 func TestHeader_EmptyReadings_InitialHeader(t *testing.T) {
 	// arrange
