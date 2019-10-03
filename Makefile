@@ -2,8 +2,8 @@
 
 GO=CGO_ENABLED=0 GO111MODULE=on go
 
-MICROSERVICES=cmd/device-bitflow/device-bitflow
-.PHONY: $(MICROSERVICES)
+PROGRAMS=cmd/device-bitflow/device-bitflow cmd/engine/engine
+.PHONY: $(PROGRAMS)
 
 VERSION=$(shell cat ./VERSION)
 
@@ -11,11 +11,14 @@ GOFLAGS=-ldflags "-X github.com/datenente/device-bitflow.Version=$(VERSION)"
 
 GIT_SHA=$(shell git rev-parse HEAD)
 
-build: $(MICROSERVICES)
+build: $(PROGRAMS)
 	$(GO) install -tags=safe
 
 cmd/device-bitflow/device-bitflow:
 	$(GO) build $(GOFLAGS) -o $@ ./cmd/device-bitflow
+
+cmd/engine/engine:
+	$(GO) build $(GOFLAGS) -o $@ ./cmd/engine
 
 docker:
 	docker build \
@@ -34,4 +37,4 @@ test:
 	$(GO) test -coverprofile=coverage.out ./...
 
 clean:
-	rm -f $(MICROSERVICES) $(MICROSERVICES).log
+	rm -f $(PROGRAMS) $(PROGRAMS).log
