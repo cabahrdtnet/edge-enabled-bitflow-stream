@@ -7,13 +7,14 @@ import (
 )
 
 // these values are set in cmd/device-bitflow/engine/main.go
-type Configuration struct {
-	Name string
-	Script string
-	InputTopic string
-	OutputTopic string
-	MqttBroker string
-	Arguments string
+type configuration struct {
+	Name         string
+	Script       string
+	Arguments    string
+	InputTopic   string
+	OutputTopic  string
+	CommandTopic string
+	MqttBroker   string
 }
 
 // replace input and output word in Configuration string by std://-

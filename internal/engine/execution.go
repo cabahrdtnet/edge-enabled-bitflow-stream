@@ -57,9 +57,10 @@ func Run() {
 		fmt.Println(err.Error())
 	}
 
+	// TODO add error checks
 	opipe, _ := cmd.StdoutPipe()
 
-	//cmd.Stderr = os.Stderr
+	// TODO add error checks
 	epipe, _ := cmd.StderrPipe()
 	//cmd.Run
 	if err := cmd.Start(); err != nil {
@@ -67,11 +68,12 @@ func Run() {
 	}
 
 	go func () {
-		msgh := <- msngr.Subscription
+		// TODO add check if channel is closed
+		msgh := <- data.Subscription
 		fmt.Println("INPUT HEADER: ", msgh)
 		b := []byte(msgh+"\n")
 		ipipe.Write(b)
-		for msg := range msngr.Subscription {
+		for msg := range data.Subscription {
 			fmt.Println("INPUT: ", msg)
 			b := []byte(msg+"\n")
 			ipipe.Write(b)
@@ -79,6 +81,11 @@ func Run() {
 				fmt.Print("error")
 			}
 		}
+		// this signals bitflow that it should stop reading input
+		// effectively closing it gracefully
+		fmt.Println("Closing ipipe.")
+		ipipe.Close()
+		fmt.Println(cmd.ProcessState.ExitCode())
 		fmt.Println("Finished.")
 		//header := "time,tags,cpu,disk-io/all/io,disk-io/all/ioBytes,disk-io/all/ioTime,disk-io/all/sausage\n"
 		//s1 := "2017-11-09 13:51:09.877210495,experiment=cpu host=wally133,0,0,0,0,0\n"
@@ -102,7 +109,7 @@ func Run() {
 		//	if len(b) == 0 {
 		//		//fmt.Println("Is empty...")
 		//	} else {
-		//		msngr.Publication <- string(b)
+		//		data.Publication <- string(b)
 		//	}
 		//}
 
@@ -116,20 +123,28 @@ func Run() {
 		for err == nil {
 			fmt.Println("READING")
 			line, err = reader.ReadString('\n')
+			if err != nil {
+				close(data.Publication)
+				break
+			}
 			fmt.Print("OUTPUT: ", line)
 			i++
 			fmt.Println("[[", i, "]]")
 			line = line[:len(line)-1]
-			//Publish(line)
+			//publish(line)
 			//fmt.Println("Waiting for line.")
-			msngr.Publication <- line
+			data.Publication <- line
 		}
 
+		// TODO remove line this has already happened
+		//opipe.Close()
+		// TODO remove next line this is redundant
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Command output pipe has been closed. Reason:", err)
 		}
 	}()
 
+	// TODO put this in a go routine
 	// read stderr of bitflow (instead of stdout as this is potentially used by executing scripts)
 	reader := bufio.NewReader(epipe)
 	line, err := reader.ReadString('\n')
@@ -138,5 +153,9 @@ func Run() {
 		line, err = reader.ReadString('\n')
 	}
 
-	fmt.Println("Ciao.")
+	if err != nil {
+		fmt.Println("Command error pipe has been closed. Reason:", err)
+	}
+
+	fmt.Println("Closing script execution engine.")
 }
