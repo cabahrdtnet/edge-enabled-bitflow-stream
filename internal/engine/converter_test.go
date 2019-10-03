@@ -37,7 +37,7 @@ func TestHeader_EmptyReadings_InitialHeader(t *testing.T) {
 	readings := []models.Reading{}
 
 	// act
-	header := Header(readings)
+	header := header(readings)
 
 	// assert
 	expected := "time,tags"
@@ -51,7 +51,7 @@ func TestHeader_AverageReadings_CorrectHeader(t *testing.T) {
 	readings := event.Readings
 
 	// act
-	header := Header(readings)
+	header := header(readings)
 
 	// assert
 	expected := "time,tags,humancount,caninecount"
@@ -65,7 +65,7 @@ func TestEtos_EmptyInput_EmptyOutput(t *testing.T) {
 	event := models.Event{}
 
 	// act
-	sample, err := Etos(event)
+	sample, err := etos(event)
 
 	// assert
 	expected := ``
@@ -79,7 +79,7 @@ func TestEtos_AverageInput_SuccessfulConversion(t *testing.T) {
 	now = time.Unix(0, 1569845752091497000).UTC().Format("2006-01-02 15:04:05.000000000")
 
 	// act
-	sample, err := Etos(event)
+	sample, err := etos(event)
 
 	// assert
 	expected := `2019-09-30 12:15:52.091497000,origin=2016-08-21T19:06:26.919000000 device=countcamera1,1,0`
@@ -91,14 +91,13 @@ func TestEtos_AverageInput_SuccessfulConversion(t *testing.T) {
 	now = time.Now().UTC().Format("2006-01-02 15:04:05.000000000")
 }
 
-// Etor
 func TestStoe_EmptyInput_EmptyOutput(t *testing.T) {
 	// arrange
 	header := "time,tags"
 	str := ``
 
 	// act
-	event, err := Stoe("", str, header)
+	event, err := stoe("", str, header)
 
 	// assert
 	expected := models.Event{}
@@ -114,7 +113,7 @@ func TestStoe_AverageInput_SuccessfulConversion(t *testing.T) {
 	str := `2019-09-30 12:15:52.091497000,origin=2016-08-21T19:06:26.919000000 device="countcamera1",1,0`
 	now = time.Unix(0, 1471806386919000000).UTC().Format("2006-01-02 15:04:05.000000000")
 	// act
-	resultEvent, err := Stoe("countcamera1", str, header)
+	resultEvent, err := stoe("countcamera1", str, header)
 
 	// assert
 	expected := event
@@ -125,4 +124,77 @@ func TestStoe_AverageInput_SuccessfulConversion(t *testing.T) {
 
 	// clean up
 	now = time.Now().UTC().Format("2006-01-02 15:04:05.000000000")
+}
+
+func TestMapIO_EmptyScript_ShouldReturnEmptyStringAndError(t *testing.T) {
+	// arrange
+	str := ""
+
+	// act
+	result, err := mapIO(str)
+
+	// assert
+	expected := ""
+	if result != expected || err == nil {
+		t.Errorf("Can't handle empty script!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
+
+func TestMapIO_ErrorInValuesToMap_ShouldReturnFaultyScriptAndError(t *testing.T) {
+	// arrange
+	str := "iput -> avg() -> outpit"
+
+	// act
+	result, err := mapIO(str)
+
+	// assert
+	expected := "iput -> avg() -> outpit"
+	if result != expected || err == nil {
+		t.Errorf("Can't handle faulty script!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
+
+func TestMapIO_MinimalScript_ShouldSucceed(t *testing.T) {
+	// arrange
+	str := "input -> output"
+
+	// act
+	result, err := mapIO(str)
+
+	// assert
+	expected := "std://- -> std+csv://-"
+	if result != expected || err != nil {
+		t.Errorf("Can't handle minimal script!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
+
+func TestMapIO_MinimalScriptWithWhiteSpaces_ShouldSucceed(t *testing.T) {
+	// arrange
+	str := `	
+			    input -> output	
+	              
+			`
+
+	// act
+	result, err := mapIO(str)
+
+	// assert
+	expected := "std://- -> std+csv://-"
+	if result != expected || err != nil {
+		t.Errorf("Can't handle whitespaced script!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
+
+func TestMapIO_AverageScript_ShouldSucceed(t *testing.T) {
+	// arrange
+	str := `input -> avg() -> do(expr='set("input1",output * 10, set("field2", now(), set_tag("input", "output")))) -> output`
+
+	// act
+	result, err := mapIO(str)
+
+	// assert
+	expected := `std://- -> avg() -> do(expr='set("input1",output * 10, set("field2", now(), set_tag("input", "output")))) -> std+csv://-`
+	if result != expected || err != nil {
+		t.Errorf("Can't handle average script!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
 }

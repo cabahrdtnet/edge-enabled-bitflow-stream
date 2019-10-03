@@ -10,6 +10,17 @@ var (
 	closing = false
 )
 
+// these values are set in cmd/device-bitflow/engine/main.go
+type configuration struct {
+	Name         string
+	Script       string
+	Arguments    string
+	InputTopic   string
+	OutputTopic  string
+	CommandTopic string
+	MqttBroker   string
+}
+
 // apply configuration for a run
 func Configure() {
 	//go func() {

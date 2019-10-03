@@ -5,6 +5,7 @@ import (
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -21,7 +22,7 @@ var (
 )
 
 // header for stream based on readings
-func Header(readings []models.Reading) string {
+func header(readings []models.Reading) string {
 	header := "time,tags"
 	for _, r := range readings {
 		header += "," + r.Name
@@ -30,7 +31,7 @@ func Header(readings []models.Reading) string {
 }
 
 // convert EdgeX event bitflow csv sample
-func Etos(e models.Event) (string, error) {
+func etos(e models.Event) (string, error) {
 	if cmp.Equal(e, models.Event{}, cmpopts.IgnoreUnexported(models.Event{})) {
 		return "", fmt.Errorf("event is empty")
 	}
@@ -51,7 +52,7 @@ func Etos(e models.Event) (string, error) {
 }
 
 // convert bitflow csv sample to EdgeX event
-func Stoe(deviceName string, sample string, header string) (models.Event, error) {
+func stoe(deviceName string, sample string, header string) (models.Event, error) {
 	if sample == "" || deviceName == "" || header == "" {
 		return models.Event{}, fmt.Errorf(
 			"sample, deviceName or header are empty (sample:%s, deviceName:%s, header:%s)",
@@ -66,7 +67,7 @@ func Stoe(deviceName string, sample string, header string) (models.Event, error)
 
 	eventTime, err := time.Parse(layout, now)
 	if err != nil {
-		return models.Event{}, fmt.Errorf("parsing error in Stoe: %s", err.Error())
+		return models.Event{}, fmt.Errorf("parsing error in stoe: %s", err.Error())
 	}
 
 	readings := []models.Reading{}
@@ -84,4 +85,35 @@ func Stoe(deviceName string, sample string, header string) (models.Event, error)
 		Origin:   eventTime.UnixNano() / 1000 / 1000,
 		Readings: readings,
 	}, nil
+}
+
+// replace input and output word in Configuration string by std://-
+func mapIO(script string) (string, error) {
+	if script == "" {
+		return script, fmt.Errorf("script is empty")
+	}
+	const stdin = "std://-"
+	const stdout = "std+csv://-"
+	scriptCopy := script
+
+	unchanged := scriptCopy
+	r, _ := regexp.Compile(`\s+`)
+	scriptCopy = r.ReplaceAllString(scriptCopy, " ")
+	scriptCopy = strings.TrimSpace(script)
+
+	unchanged = scriptCopy
+	r, _ = regexp.Compile(`^input`)
+	scriptCopy = r.ReplaceAllString(scriptCopy, stdin)
+	if scriptCopy == unchanged {
+		return script, fmt.Errorf("leading input designator not found")
+	}
+
+	unchanged = scriptCopy
+	r, _ = regexp.Compile(`output$`)
+	scriptCopy = r.ReplaceAllString(scriptCopy, stdout)
+	if scriptCopy == unchanged {
+		return script, fmt.Errorf("trailing output designator not found")
+	}
+
+	return scriptCopy, nil
 }

@@ -25,7 +25,7 @@ type BitflowCommand struct {
 // ENGINEPATH = path to engine
 
 func Run() {
-	Config.Script, _ = ReplaceIO(Config.Script)
+	Config.Script, _ = mapIO(Config.Script)
 	//TODO reset script
 	//script := Config.Script
 	//script := `std://- -> avg() -> tcp+csv://:55555`
@@ -63,20 +63,25 @@ func Run() {
 	// TODO add error checks
 	epipe, _ := cmd.StderrPipe()
 	//cmd.Run
-	if err := cmd.Start(); err != nil {
-		fmt.Println(err.Error())
-	}
+	//if err := cmd.Start(); err != nil {
+	//	fmt.Println(err.Error())
+	//}
 
 	go func () {
 		// TODO add check if channel is closed
 		msgh := <- data.Subscription
 		fmt.Println("INPUT HEADER: ", msgh)
 		b := []byte(msgh+"\n")
-		ipipe.Write(b)
+		writer := bufio.NewWriter(ipipe)
+		writer.Write(b)
+		writer.Flush()
+		//ipipe.Write(b)
 		for msg := range data.Subscription {
 			fmt.Println("INPUT: ", msg)
 			b := []byte(msg+"\n")
-			ipipe.Write(b)
+			writer.Write(b)
+			writer.Flush()
+			//ipipe.Write(b)
 			if err != nil {
 				fmt.Print("error")
 			}
@@ -87,36 +92,11 @@ func Run() {
 		ipipe.Close()
 		fmt.Println(cmd.ProcessState.ExitCode())
 		fmt.Println("Finished.")
-		//header := "time,tags,cpu,disk-io/all/io,disk-io/all/ioBytes,disk-io/all/ioTime,disk-io/all/sausage\n"
-		//s1 := "2017-11-09 13:51:09.877210495,experiment=cpu host=wally133,0,0,0,0,0\n"
-		//ipipe.Write([]byte(header))
-		//for {
-		//	time.Sleep(1 * time.Second)
-		//	b := []byte(s1)
-		//	ipipe.Write(b)
-		//	//ipipe.Close()
-		//	if err != nil {
-		//		return
-		//		fmt.Print("error")
-		//	}
-		//}
 	}()
 
 	go func () {
-		//for {
-		//	b := []byte{}
-		//	opipe.Read(b)
-		//	if len(b) == 0 {
-		//		//fmt.Println("Is empty...")
-		//	} else {
-		//		data.Publication <- string(b)
-		//	}
-		//}
-
 		reader := bufio.NewReader(opipe)
 		line := ""
-		//line, err := reader.ReadString('\n')
-		// for err == nil
 		line, err := reader.ReadString('\n')
 		fmt.Print("OUTPUT HEADER: ", line)
 		i := 0
@@ -131,30 +111,26 @@ func Run() {
 			i++
 			fmt.Println("[[", i, "]]")
 			line = line[:len(line)-1]
-			//publish(line)
-			//fmt.Println("Waiting for line.")
 			data.Publication <- line
 		}
 
-		// TODO remove line this has already happened
-		//opipe.Close()
-		// TODO remove next line this is redundant
-		if err != nil {
-			fmt.Println("Command output pipe has been closed. Reason:", err)
-		}
+		fmt.Println("Command output pipe has been closed. Reason:", err)
 	}()
 
 	// TODO put this in a go routine
 	// read stderr of bitflow (instead of stdout as this is potentially used by executing scripts)
-	reader := bufio.NewReader(epipe)
-	line, err := reader.ReadString('\n')
-	for err == nil {
-		fmt.Print("L ", line)
-		line, err = reader.ReadString('\n')
-	}
-
-	if err != nil {
+	go func() {
+		reader := bufio.NewReader(epipe)
+		line, err := reader.ReadString('\n')
+		for err == nil {
+			fmt.Print("L ", line)
+			line, err = reader.ReadString('\n')
+		}
 		fmt.Println("Command error pipe has been closed. Reason:", err)
+	}()
+
+	if err := cmd.Run(); err != nil {
+		fmt.Println(err.Error())
 	}
 
 	fmt.Println("Closing script execution engine.")
