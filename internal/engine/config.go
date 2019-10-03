@@ -13,11 +13,8 @@ type Configuration struct {
 	InputTopic string
 	OutputTopic string
 	MqttBroker string
+	Arguments string
 }
-
-var (
-	Config = Configuration{}
-)
 
 // replace input and output word in Configuration string by std://-
 func ReplaceIO(script string) (string, error) {
