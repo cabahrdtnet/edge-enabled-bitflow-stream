@@ -3,18 +3,20 @@ package engine
 import "fmt"
 
 var (
-	// these values are set in cmd/device-bitflow/engine/main.go
-	Config = configuration{}
-	data   = dataChannel{make(chan string), make(chan string)}
-	cmd    = commandChannel{make(chan string)}
-	closing = false
+	// these values are set in command/device-bitflow/engine/main.go
+	Config  = configuration{}
+	data    = dataChannel{make(chan string), make(chan string)}
+	command = commandChannel{make(chan string)}
 )
 
-// these values are set in cmd/device-bitflow/engine/main.go
+// TODO channels should contain only converted data, i.e. an event channel would be semantically better
+// TODO implement json command channel
+
+// these values are set in command/device-bitflow/engine/main.go
 type configuration struct {
 	Name         string
 	Script       string
-	Arguments    string
+	Parameters   string
 	InputTopic   string
 	OutputTopic  string
 	CommandTopic string
@@ -24,27 +26,26 @@ type configuration struct {
 // apply configuration for a run
 func Configure() {
 	//go func() {
-	//	for msg := range data.Subscription {
+	//	for msg := range data.subscription {
 	//		fmt.Println("Received: ", msg)
 	//	}
 	//}()
 
-	go InitSubscription()
-	go subscribeCommand()
+	go subscribeToData()
+	go subscribeToCommand()
 
 	go handleCommand()
 	go handlePublicationValue()
 }
 
-// TODO move, handlePublicationValue, subscribe here
 func handleCommand() {
-	for msg := range cmd.Subscription {
+	for msg := range command.Subscription {
+		// TODO this channel should contain custom JSON command data
 		switch msg {
 		case "shutdown":
 			fmt.Println("Closing channels...")
-			close(data.Subscription)
-			close(cmd.Subscription)
-			//close(data.Publication)
+			close(data.subscription)
+			close(command.Subscription)
 			fmt.Println("Channels closed. Shutting down now.")
 		default:
 			fmt.Println("Ignoring unknown command.")
@@ -52,27 +53,21 @@ func handleCommand() {
 	}
 }
 
+// TODO who's doing the conversion and whose marshalling? it's also a perspective question
 func handlePublicationValue() {
-	for payload := range data.Publication {
-		//fmt.Println("hello")
-		// foo, ok := <- ch
-		//             if !ok {
-		//                println("done")
-		//                wg.Done()
-		//                return
-		//            }
-		// TODO handle: empty data
+	for payload := range data.publication {
+		// TODO marshal here?
+		// marshal from EdgeX event to EdgeX JSON format
 		fmt.Println("PUBLISHING:", payload)
 		publish(payload)
-		//fmt.Println("byebye")
 	}
 	fmt.Println("data.publication is closed.")
 }
 
 // MQTT messages
-// sub handler      writesTo  Message.Subscription
-// stdin of bitflow readsFrom Message.Subscription
+// sub handler      writesTo  Message.subscription
+// stdin of bitflow readsFrom Message.subscription
 
 // processing
-// stdout of bitflow writesTo  Message.Publication
-// handlePublicationValue           readsFrom Message.Publication
+// stdout of bitflow writesTo  Message.publication
+// handlePublicationValue           readsFrom Message.publication

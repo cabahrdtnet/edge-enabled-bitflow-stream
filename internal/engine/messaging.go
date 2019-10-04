@@ -7,19 +7,19 @@ import (
 )
 
 type dataChannel struct {
-	Publication chan string
-	Subscription chan string
+	publication  chan string
+	subscription chan string
 }
 
 type commandChannel struct {
 	Subscription chan string
 }
 
-func InitSubscription() {
+func subscribeToData() {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
 	// TODO rename this to something more meaningful
-	opts.SetClientID(Config.Name + "Sub")
+	opts.SetClientID(Config.Name + "-data-subscriber")
 	//opts.SetUsername(*user)
 	//opts.SetPassword(*password)
 
@@ -28,7 +28,8 @@ func InitSubscription() {
 
 	opts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
 		//choke <- [2]string{msg.Topic(), string(msg.Payload())}
-		data.Subscription <- string(msg.Payload()) //+"\n"
+		// unmarshal from EdgeX JSON format to EdgeX Event
+		data.subscription <- string(msg.Payload()) //+"\n"
 	})
 
 	client := MQTT.NewClient(opts)
@@ -50,6 +51,7 @@ func InitSubscription() {
 		receiveCount++
 	}
 
+	// TODO fix broker error msg: Socket error on client engine-0-data-subscriber, disconnecting
 	client.Disconnect(250)
 	fmt.Println("Sample Subscriber Disconnected")
 }
@@ -58,7 +60,7 @@ func publish(payload string) {
 	fmt.Println("Sample Publisher Started")
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
-	opts.SetClientID(Config.Name + "Pub")
+	opts.SetClientID(Config.Name + "-data-publisher")
 	//opts.SetCleanSession(true)
 
 	client := MQTT.NewClient(opts)
@@ -77,13 +79,12 @@ func publish(payload string) {
 
 	client.Disconnect(250)
 	fmt.Println("Sample Publisher Disconnected")
-
 }
 
-func subscribeCommand() {
+func subscribeToCommand() {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
-	opts.SetClientID(Config.Name + "-Command")
+	opts.SetClientID(Config.Name + "-command-subscriber")
 	//opts.SetUsername(*user)
 	//opts.SetPassword(*password)
 
@@ -92,8 +93,8 @@ func subscribeCommand() {
 
 	opts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
 		choke <- [2]string{msg.Topic(), string(msg.Payload())}
-		//data.Subscription <- string(msg.Payload()) //+"\n"
-		cmd.Subscription <- string(msg.Payload())
+		//data.subscription <- string(msg.Payload()) //+"\n"
+		command.Subscription <- string(msg.Payload())
 	})
 
 	client := MQTT.NewClient(opts)
@@ -115,6 +116,7 @@ func subscribeCommand() {
 		receiveCount++
 	}
 
+	// TODO fix broker error msg: Socket error on client engine-0-command-subscriber, disconnecting
 	client.Disconnect(250)
 	fmt.Println("Sample Subscriber Disconnected")
 }

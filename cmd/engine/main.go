@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/datenente/device-bitflow/internal/engine"
+	"os"
 )
 
 /*
@@ -15,7 +16,7 @@ import (
  */
 // ./engine \
 //// -name="Bitflow-Script-Execution-Engine-0" \
-//// -script="input -> avg() -> output" \
+//// -script="input -> avg() -> append-latency() -> output" \
 //// -input="" \
 //// -output="bitflow/engine/0" \
 //// -command="bitflow/engine/0/command" \
@@ -32,7 +33,7 @@ func main() {
 	flag.StringVar(&engine.Config.OutputTopic, "output", "", "output MQTT topic")
 	flag.StringVar(&engine.Config.CommandTopic, "command", "", "command MQTT topic")
 	flag.StringVar(&engine.Config.MqttBroker, "broker", "", "mqtt broker authority")
-	flag.StringVar(&engine.Config.Arguments, "bitflow-args", "", "arguments for bitflow-pipeline process")
+	flag.StringVar(&engine.Config.Parameters, "bitflow-args", "", "arguments for bitflow-pipeline process")
 	flag.Parse()
 	fmt.Println(engine.Config)
 
@@ -40,4 +41,6 @@ func main() {
 	engine.Configure()
 
 	// run
-	engine.Run()}
+	exitCode := engine.Run()
+	os.Exit(exitCode)
+}
