@@ -5,6 +5,7 @@ import "fmt"
 var (
 	// these values are set in command/device-bitflow/engine/main.go
 	Config  = configuration{}
+	// TODO rename: read comment below
 	// both are event channels, where
 	// publication == outgoing
 	// subscription == incoming
