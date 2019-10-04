@@ -5,6 +5,10 @@ import "fmt"
 var (
 	// these values are set in command/device-bitflow/engine/main.go
 	Config  = configuration{}
+	// both are event channels, where
+	// publication == outgoing
+	// subscription == incoming
+	// data should be called events then
 	data    = dataChannel{make(chan string), make(chan string)}
 	command = commandChannel{make(chan string)}
 )
