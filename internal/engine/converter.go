@@ -30,6 +30,29 @@ func header(readings []models.Reading) string {
 	return header
 }
 
+// value descriptors for EdgeX
+func registerValueDescriptors(header string) {
+	// time,tags,humancount,humancount_avg,caninecount,caninecount_avg
+	//
+	// TODO
+	// set transmission QoS 2 or 3
+	// receive first event
+	// stop message receiving mqtt client (potentially incoming events should be queued now;
+	// QoS 1 would lead to missing messages, which is potentially an option as well, as one or two or 10
+	// missing events should not make a difference)
+	// process sample in bitflow
+	// read output header from bitflow
+	// read first processed event from bitflow
+	// stop StdoutReader
+	//
+	// from output header and first event: derive value descriptors via created Readings
+	// marshal created VD and request DS (by publishing message over ReverseCommand topic)
+	// to send them to metadata
+	// await response from DS over ReverseCommandResponse topic
+	// if positive:
+	// send signal to StdoutReader for contine its execution
+}
+
 // convert EdgeX event bitflow csv sample
 func etos(e models.Event) (string, error) {
 	if cmp.Equal(e, models.Event{}, cmpopts.IgnoreUnexported(models.Event{})) {
@@ -116,4 +139,33 @@ func mapIO(script string) (string, error) {
 	}
 
 	return scriptCopy, nil
+}
+
+func vtoh() {
+	// Event: read VD from Event return header as string
+	// example:
+	//var (
+	//	humancount = models.Reading{
+	//		Name:        "humancount",
+	//		Value:       "1",
+	//		Origin:      1471806386919,
+	//	}
+	//
+	//	caninecount = models.Reading{
+	//		Name:        "caninecount",
+	//		Value:       "0",
+	//		Origin:      1471806386919,
+	//	}
+	//
+	//	event = models.Event{
+	//		Device:   "countcamera1",
+	//		Created:  0,
+	//		Modified: 0,
+	//		Origin:   1471806386919,
+	//		Readings: []models.Reading{
+	//			humancount,
+	//			caninecount},
+	//	}
+	//) -> time,tags,humancount,caninecount
+	// Event -> Name of Readings -> (time tags) + Slice of Metrics ->
 }
