@@ -44,23 +44,22 @@ func Run() int {
 }
 
 func stdinWriter(stdinPipe io.WriteCloser) {
-	header := <-data.subscription
-
-	b := []byte(header + "\n")
+	// TODO use value descriptors in event to derive input header
+	//b := []byte(header + "\n")
 	writer := bufio.NewWriter(stdinPipe)
-	writer.Write(b)
-	writer.Flush()
-	for msg := range data.subscription {
-		// TODO fix: this channel should contain strings in Bitflow CSV data format
-		// msg = event?
-		// convert here via etos
-		//actmsg := etos(msg)
-		fmt.Println("INPUT: ", msg)
-		b := []byte(msg + "\n")
-		writer.Write(b)
+	//writer.Write(b)
+	//writer.Flush()
+	//
+	for event := range events.incoming {
+		fmt.Println("INPUT: ", event)
+		sample, err := etos(event)
+		if err != nil {
+			fmt.Println("Can't convert event to Bitflow CSV data format sample.")
+		}
+		writer.Write([]byte(sample + "\n"))
 		writer.Flush()
 	}
-	fmt.Println("Closing command stdin as data.subscription has been closed.")
+	fmt.Println("Closing command stdin as events.incoming has been closed.")
 	stdinPipe.Close()
 }
 
@@ -75,18 +74,19 @@ func stdoutReader(stdoutPipe io.ReadCloser) {
 		fmt.Println("OUTPUT: ", line)
 		// TODO fix: this channel should contain strings in EdgeX event json format
 		// convert from Bitflow CSV data format to EdgeX event object
+		// TODO use output header to derive value descriptors
+		if err != nil {
+			close(events.outgoing)
+			break
+		}
+		line = line[:len(line)-1]
 		event, convErr := stoe(Config.Name, line, header)
 		if convErr != nil {
 			panic(convErr)
 		}
+		// TODO stop exec here once wait for VD uploading
 		fmt.Println("This event would be published: ", event)
-
-		if err != nil {
-			close(data.publication)
-			break
-		}
-		line = line[:len(line)-1]
-		data.publication <- line
+		events.outgoing <- event
 	}
 	fmt.Println("Command stdout has been closed because of:", err)
 }

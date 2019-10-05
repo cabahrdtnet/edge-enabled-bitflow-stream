@@ -1,25 +1,33 @@
 package engine
 
 import (
+	"encoding/json"
 	"fmt"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/edgexfoundry/go-mod-core-contracts/models"
 	"os"
 )
 
-type dataChannel struct {
-	publication  chan string
-	subscription chan string
-}
+var (
+	events = struct {
+		outgoing chan models.Event
+		incoming chan models.Event
+	}{make(chan models.Event), make(chan models.Event)}
 
-type commandChannel struct {
-	Subscription chan string
-}
+	headers = struct {
+		incoming chan string
+	}{make(chan string)}
+
+	commands = struct {
+		incoming chan string
+	}{make(chan string)}
+)
 
 func subscribeToData() {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
 	// TODO rename this to something more meaningful
-	opts.SetClientID(Config.Name + "-data-subscriber")
+	opts.SetClientID(Config.Name + "-event-subscriber")
 	//opts.SetUsername(*user)
 	//opts.SetPassword(*password)
 
@@ -29,7 +37,14 @@ func subscribeToData() {
 	opts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
 		//choke <- [2]string{msg.Topic(), string(msg.Payload())}
 		// unmarshal from EdgeX JSON format to EdgeX Event
-		data.subscription <- string(msg.Payload()) //+"\n"
+		event := models.Event{}
+		payload := msg.Payload()
+		err := json.Unmarshal(payload, &event)
+		if err == nil {
+			events.incoming <- event
+		} else {
+			fmt.Println("Ignoring message: EdgeX Event JSON data can't be unmarshalled.")
+		}
 	})
 
 	client := MQTT.NewClient(opts)
@@ -51,7 +66,7 @@ func subscribeToData() {
 		receiveCount++
 	}
 
-	// TODO fix broker error msg: Socket error on client engine-0-data-subscriber, disconnecting
+	// TODO fix broker error msg: Socket error on client engine-0-event-subscriber, disconnecting
 	client.Disconnect(250)
 	fmt.Println("Sample Subscriber Disconnected")
 }
@@ -60,7 +75,7 @@ func publish(payload string) {
 	fmt.Println("Sample Publisher Started")
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
-	opts.SetClientID(Config.Name + "-data-publisher")
+	opts.SetClientID(Config.Name + "-event-publisher")
 	//opts.SetCleanSession(true)
 
 	client := MQTT.NewClient(opts)
@@ -71,7 +86,7 @@ func publish(payload string) {
 	qos := 0
 	//payload := "This is a test and I'll see if it works."
 	for i := 0; i < num; i++ {
-		//fmt.Println("---- waiting for data to handlePublicationValue ----")
+		//fmt.Println("---- waiting for event to handlePublicationValue ----")
 		//fmt.Println("---- doing handlePublicationValue ----", payload)
 		token := client.Publish(Config.OutputTopic, byte(qos), false, payload)
 		token.Wait()
@@ -93,8 +108,8 @@ func subscribeToCommand() {
 
 	opts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
 		choke <- [2]string{msg.Topic(), string(msg.Payload())}
-		//data.subscription <- string(msg.Payload()) //+"\n"
-		command.Subscription <- string(msg.Payload())
+		//event.incoming <- string(msg.Payload()) //+"\n"
+		commands.incoming <- string(msg.Payload())
 	})
 
 	client := MQTT.NewClient(opts)
@@ -116,7 +131,7 @@ func subscribeToCommand() {
 		receiveCount++
 	}
 
-	// TODO fix broker error msg: Socket error on client engine-0-command-subscriber, disconnecting
+	// TODO fix broker error msg: Socket error on client engine-0-commands-subscriber, disconnecting
 	client.Disconnect(250)
 	fmt.Println("Sample Subscriber Disconnected")
 }
