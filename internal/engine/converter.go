@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -28,29 +29,6 @@ func header(readings []models.Reading) string {
 		header += "," + r.Name
 	}
 	return header
-}
-
-// value descriptors for EdgeX
-func registerValueDescriptors(header string) {
-	// time,tags,humancount,humancount_avg,caninecount,caninecount_avg
-	//
-	// TODO
-	// set transmission QoS 2 or 3
-	// receive first event
-	// stop message receiving mqtt client (potentially incoming events should be queued now;
-	// QoS 1 would lead to missing messages, which is potentially an option as well, as one or two or 10
-	// missing events should not make a difference)
-	// process sample in bitflow
-	// read output header from bitflow
-	// read first processed event from bitflow
-	// stop StdoutReader
-	//
-	// from output header and first event: derive value descriptors via created Readings
-	// marshal created VD and request DS (by publishing message over ReverseCommand topic)
-	// to send them to metadata
-	// await response from DS over ReverseCommandResponse topic
-	// if positive:
-	// send signal to StdoutReader for contine its execution
 }
 
 // convert EdgeX event bitflow csv sample
@@ -168,4 +146,24 @@ func vtoh() {
 	//	}
 	//) -> time,tags,humancount,caninecount
 	// Event -> Name of Readings -> (time tags) + Slice of Metrics ->
+}
+
+// TODO test this shit....
+func typeOf(value string) string {
+	_, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return "I"
+	}
+
+	_, err = strconv.ParseFloat(value, 64)
+	if err != nil {
+		return "F"
+	}
+
+	_, err = strconv.ParseBool(value)
+	if err != nil {
+		return "B"
+	}
+
+	return "S"
 }

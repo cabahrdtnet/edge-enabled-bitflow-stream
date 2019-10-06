@@ -44,12 +44,20 @@ func Run() int {
 }
 
 func stdinWriter(stdinPipe io.WriteCloser) {
-	// TODO use value descriptors in event to derive input header
-	//b := []byte(header + "\n")
+	event := <- events.incoming
+	header := header(event.Readings)
+	// TODO move this to the top of the function
 	writer := bufio.NewWriter(stdinPipe)
-	//writer.Write(b)
-	//writer.Flush()
-	//
+	writer.Write([]byte(header + "\n"))
+	writer.Flush()
+
+	sample, err := etos(event)
+	if err != nil {
+		fmt.Println("Can't convert initial event to Bitflow CSV data format sample.")
+	}
+	writer.Write([]byte(sample + "\n"))
+	writer.Flush()
+
 	for event := range events.incoming {
 		fmt.Println("INPUT: ", event)
 		sample, err := etos(event)
@@ -66,15 +74,31 @@ func stdinWriter(stdinPipe io.WriteCloser) {
 func stdoutReader(stdoutPipe io.ReadCloser) {
 	reader := bufio.NewReader(stdoutPipe)
 	line := ""
-	line, err := reader.ReadString('\n')
-	header := line
+	header, err := reader.ReadString('\n')
 	fmt.Println("OUTPUT HEADER: ", header)
+	// TODO this probably does not work as an "\n" is appended by Bitflow... I think...
+
+	line, err = reader.ReadString('\n')
+	fmt.Println("OUTPUT: ", line)
+	if err != nil {
+		close(events.outgoing)
+	}
+	line = line[:len(line)-1]
+	event, convErr := stoe(Config.Name, line, header)
+	if convErr != nil {
+		panic(convErr)
+	}
+	// TODO maybe close this channel
+	initial.processedEvent <- event
+	fmt.Println("Waiting for value descriptors to be initialized.")
+	valueDescriptorsInitialized.Wait()
+
+	fmt.Println("Publishing initial event: ", event)
+	events.outgoing <- event
+
 	for err == nil {
 		line, err = reader.ReadString('\n')
 		fmt.Println("OUTPUT: ", line)
-		// TODO fix: this channel should contain strings in EdgeX event json format
-		// convert from Bitflow CSV data format to EdgeX event object
-		// TODO use output header to derive value descriptors
 		if err != nil {
 			close(events.outgoing)
 			break
@@ -84,8 +108,11 @@ func stdoutReader(stdoutPipe io.ReadCloser) {
 		if convErr != nil {
 			panic(convErr)
 		}
-		// TODO stop exec here once wait for VD uploading
-		fmt.Println("This event would be published: ", event)
+		initial.processedEvent <- event
+		fmt.Println("Waiting for value descriptors to be initialized.")
+		valueDescriptorsInitialized.Wait()
+
+		fmt.Println("Publishing event: ", event)
 		events.outgoing <- event
 	}
 	fmt.Println("Command stdout has been closed because of:", err)

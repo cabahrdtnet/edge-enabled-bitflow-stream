@@ -3,6 +3,8 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/edgexfoundry/go-mod-core-contracts/models"
+	"sync"
 )
 
 var (
@@ -13,6 +15,7 @@ var (
 	// publication == outgoing
 	// subscription == incoming
 	// data should be called events then
+	valueDescriptorsInitialized sync.WaitGroup
 )
 
 // TODO channels should contain only converted data, i.e. an event channel would be semantically better
@@ -36,12 +39,63 @@ func Configure() {
 	//		fmt.Println("Received: ", msg)
 	//	}
 	//}()
+	valueDescriptorsInitialized.Add(1)
 
-	go subscribeToData()
+	go subscribeToDataOnce()
+	go registerValueDescriptors()
 	go subscribeToCommand()
+	go subscribeToReverseCommandResponse()
 
 	go handleCommand()
 	go handlePublicationValue()
+}
+
+// value descriptors for EdgeX
+func registerValueDescriptors() {
+	initialProcessedEvent, ok := <- initial.processedEvent
+	if !ok {
+		panic("Initial processed event couldn't be retrieved, corresponding channel has been closed.")
+	}
+	vds := []models.ValueDescriptor{}
+
+	// - derive value descriptors via created readings and output header
+	// (time,tags,)humancount,humancount_avg,caninecount,caninecount_avg
+	for _, reading := range initialProcessedEvent.Readings {
+		vd := models.ValueDescriptor{
+			Name:
+				reading.Name,
+			Description:
+				fmt.Sprintf("auto generated value by bitflow script execution engine named: %s",
+					reading.Name),
+			Type:
+				typeOf(reading.Value),
+			UomLabel:      "",
+			Formatting:    "%s",
+			Labels:        []string{
+				"bitflow-value-descriptor",
+				"created-by-" + reading.Device,
+			},
+		}
+		vds = append(vds, vd)
+	}
+
+	// TODO send value descriptor to server one by one, as you need to get an answer for each
+	// - marshal created VD and request DS
+	payload, err := json.Marshal(vds)
+	if err != nil {
+		fmt.Println("Couldn't marshal value descriptor slice.")
+	}
+	// - publish message over ReverseCommand topic
+	// - let them send to metadata
+	promptReverseCommand(string(payload))
+
+	// - await response
+	response := <- reverseCommandResponse.incoming
+	if response != "ok" {
+		panic(response)
+	}
+	valueDescriptorsInitialized.Done()
+	subscribeToData()
 }
 
 func handleCommand() {

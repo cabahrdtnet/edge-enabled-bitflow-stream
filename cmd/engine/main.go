@@ -18,7 +18,7 @@ import (
 //// -name="Bitflow-Script-Execution-Engine-0" \
 //// -script="input -> avg() -> append-latency() -> output" \
 //// -input="" \
-//// -output="bitflow/engine/0" \
+//// -output="bitflow/engine/0/data" \
 //// -command="bitflow/engine/0/command" \
 //// -broker="tcp://192.168.178.20:1883" \
 //// -bitflow-args="-v -buf 20000"
