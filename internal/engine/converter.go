@@ -119,49 +119,23 @@ func mapIO(script string) (string, error) {
 	return scriptCopy, nil
 }
 
-func vtoh() {
-	// Event: read VD from Event return header as string
-	// example:
-	//var (
-	//	humancount = models.Reading{
-	//		Name:        "humancount",
-	//		Value:       "1",
-	//		Origin:      1471806386919,
-	//	}
-	//
-	//	caninecount = models.Reading{
-	//		Name:        "caninecount",
-	//		Value:       "0",
-	//		Origin:      1471806386919,
-	//	}
-	//
-	//	event = models.Event{
-	//		Device:   "countcamera1",
-	//		Created:  0,
-	//		Modified: 0,
-	//		Origin:   1471806386919,
-	//		Readings: []models.Reading{
-	//			humancount,
-	//			caninecount},
-	//	}
-	//) -> time,tags,humancount,caninecount
-	// Event -> Name of Readings -> (time tags) + Slice of Metrics ->
-}
-
-// TODO test this shit....
 func typeOf(value string) string {
+	if value == "" {
+		return "S"
+	}
+
 	_, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
+	if err == nil {
 		return "I"
 	}
 
 	_, err = strconv.ParseFloat(value, 64)
-	if err != nil {
+	if err == nil {
 		return "F"
 	}
 
 	_, err = strconv.ParseBool(value)
-	if err != nil {
+	if err == nil {
 		return "B"
 	}
 

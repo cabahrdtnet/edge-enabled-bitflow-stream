@@ -198,3 +198,74 @@ func TestMapIO_AverageScript_ShouldSucceed(t *testing.T) {
 		t.Errorf("Can't handle average script!\n-Result was: %s\n-Expected was: %s", result, expected)
 	}
 }
+
+// int -> I; float -> F; bool -> B; string -> S
+func TestTypeOf_EmptyString_ReturnS(t *testing.T) {
+	// arrange
+	str := ""
+
+	// act
+	result := typeOf(str)
+
+	// assert
+	expected := "S"
+	if result != expected {
+		t.Errorf("Couldn't parse supplied string!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
+
+func TestTypeOf_Integer_ReturnI(t *testing.T) {
+	// arrange
+	str := "1"
+
+	// act
+	result := typeOf(str)
+
+	// assert
+	expected := "I"
+	if result != expected {
+		t.Errorf("Couldn't parse supplied string!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
+
+func TestTypeOf_Float_ReturnF(t *testing.T) {
+	// arrange
+	str := "3.14"
+
+	// act
+	result := typeOf(str)
+
+	// assert
+	expected := "F"
+	if result != expected {
+		t.Errorf("Couldn't parse supplied string!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
+
+func TestTypeOf_Bool_ReturnB(t *testing.T) {
+	// arrange
+	str := "true"
+
+	// act
+	result := typeOf(str)
+
+	// assert
+	expected := "B"
+	if result != expected {
+		t.Errorf("Couldn't parse supplied string!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
+
+func TestTypeOf_StringOrOtherObject_ReturnS(t *testing.T) {
+	// arrange
+	str := "such a short string"
+
+	// act
+	result := typeOf(str)
+
+	// assert
+	expected := "S"
+	if result != expected {
+		t.Errorf("Couldn't parse supplied string!\n-Result was: %s\n-Expected was: %s", result, expected)
+	}
+}
