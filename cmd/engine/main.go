@@ -27,7 +27,7 @@ func main() {
 	// TODO add possibility to read from toml file
 	// TODO improve robustness of process? e.g. bitflow breaks when header isn't the very first thing to arrive
 	// parse configuration from CLI arguments
-	flag.StringVar(&engine.Config.Name, "name", "Unknown script-execution-engine...", "name of engine")
+	flag.StringVar(&engine.Config.EngineName, "name", "Unknown script-execution-engine...", "name of engine")
 	flag.StringVar(&engine.Config.Script, "script", "input -> output", "script to run")
 	flag.StringVar(&engine.Config.InputTopic, "input", "", "input MQTT topic")
 	flag.StringVar(&engine.Config.OutputTopic, "output", "", "output MQTT topic")
@@ -37,10 +37,8 @@ func main() {
 	flag.Parse()
 	fmt.Println(engine.Config)
 
-	// configure run
 	engine.Configure()
-
-	// run
 	exitCode := engine.Run()
+	engine.CleanUp()
 	os.Exit(exitCode)
 }

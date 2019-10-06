@@ -16,7 +16,6 @@ func Run() int {
 	}
 	params := strings.Split(Config.Parameters, " ")
 	args := append(params, script)
-
 	cmd := exec.Command("bitflow-pipeline", args...)
 
 	stdinPipe, err := cmd.StdinPipe()
@@ -39,6 +38,7 @@ func Run() int {
 	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
+	bitflowPipeline.Done()
 
 	return cmd.ProcessState.ExitCode()
 }
@@ -73,18 +73,19 @@ func stdinWriter(stdinPipe io.WriteCloser) {
 
 func stdoutReader(stdoutPipe io.ReadCloser) {
 	reader := bufio.NewReader(stdoutPipe)
-	line := ""
 	header, err := reader.ReadString('\n')
 	fmt.Println("OUTPUT HEADER: ", header)
 	// TODO this probably does not work as an "\n" is appended by Bitflow... I think...
 
-	line, err = reader.ReadString('\n')
+	line, err := reader.ReadString('\n')
 	fmt.Println("OUTPUT: ", line)
 	if err != nil {
 		close(events.outgoing)
 	}
+
+	header = header[:len(header)-1]
 	line = line[:len(line)-1]
-	event, convErr := stoe(Config.Name, line, header)
+	event, convErr := stoe(Config.EngineName, line, header)
 	if convErr != nil {
 		panic(convErr)
 	}
@@ -104,13 +105,10 @@ func stdoutReader(stdoutPipe io.ReadCloser) {
 			break
 		}
 		line = line[:len(line)-1]
-		event, convErr := stoe(Config.Name, line, header)
+		event, convErr := stoe(Config.EngineName, line, header)
 		if convErr != nil {
 			panic(convErr)
 		}
-		initial.processedEvent <- event
-		fmt.Println("Waiting for value descriptors to be initialized.")
-		valueDescriptorsInitialized.Wait()
 
 		fmt.Println("Publishing event: ", event)
 		events.outgoing <- event

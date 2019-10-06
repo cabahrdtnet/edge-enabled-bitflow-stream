@@ -15,7 +15,10 @@ var (
 	// publication == outgoing
 	// subscription == incoming
 	// data should be called events then
+	// TODO IDs from server, which should later be removed from it
+	valueDescriptorsIDs         = []string{}
 	valueDescriptorsInitialized sync.WaitGroup
+	bitflowPipeline             sync.WaitGroup
 )
 
 // TODO channels should contain only converted data, i.e. an event channel would be semantically better
@@ -23,7 +26,7 @@ var (
 
 // these values are set in commands/device-bitflow/engine/main.go
 type configuration struct {
-	Name         string
+	EngineName   string
 	Script       string
 	Parameters   string
 	InputTopic   string
@@ -34,15 +37,9 @@ type configuration struct {
 
 // apply configuration for a run
 func Configure() {
-	//go func() {
-	//	for msg := range event.incoming {
-	//		fmt.Println("Received: ", msg)
-	//	}
-	//}()
-	valueDescriptorsInitialized.Add(1)
-
-	go subscribeToDataOnce()
+	setup()
 	go registerValueDescriptors()
+
 	go subscribeToCommand()
 	go subscribeToReverseCommandResponse()
 
@@ -50,7 +47,17 @@ func Configure() {
 	go handlePublicationValue()
 }
 
-// value descriptors for EdgeX
+func setup() {
+	valueDescriptorsInitialized.Add(1)
+	bitflowPipeline.Add(1)
+	go subscribeToDataOnce()
+}
+
+func CleanUp() {
+	cleanUpValueDescriptors()
+}
+
+// register value descriptors for EdgeX
 func registerValueDescriptors() {
 	initialProcessedEvent, ok := <- initial.processedEvent
 	if !ok {
@@ -58,8 +65,6 @@ func registerValueDescriptors() {
 	}
 	vds := []models.ValueDescriptor{}
 
-	// - derive value descriptors via created readings and output header
-	// (time,tags,)humancount,humancount_avg,caninecount,caninecount_avg
 	for _, reading := range initialProcessedEvent.Readings {
 		vd := models.ValueDescriptor{
 			Name:
@@ -73,30 +78,64 @@ func registerValueDescriptors() {
 			Formatting:    "%s",
 			Labels:        []string{
 				"bitflow-value-descriptor",
-				"created-by-" + reading.Device,
+				"created-by-" + Config.EngineName,
 			},
 		}
 		vds = append(vds, vd)
 	}
 
 	// TODO send value descriptor to server one by one, as you need to get an answer for each
-	// - marshal created VD and request DS
-	payload, err := json.Marshal(vds)
-	if err != nil {
-		fmt.Println("Couldn't marshal value descriptor slice.")
-	}
-	// - publish message over ReverseCommand topic
-	// - let them send to metadata
-	promptReverseCommand(string(payload))
+	for _, vd := range vds {
+		reverseCommand := struct {
+			Command string                  `json:"command"`
+			Payload models.ValueDescriptor  `json:"payload"`
+		}{
+			"register_value_descriptor",
+			vd}
 
-	// - await response
-	response := <- reverseCommandResponse.incoming
-	if response != "ok" {
-		panic(response)
+		b, err := json.Marshal(reverseCommand)
+		if err != nil {
+			fmt.Println("Couldn't marshal reverse command packet:", string(b))
+		}
+
+		fmt.Println("Prompt register_value_descriptor reverse command.")
+		promptReverseCommand(string(b))
+		fmt.Println("Awaiting ID from server")
+		response := <- reverseCommandResponse.incoming
+		// TODO duplicates are fine; ID needs to be saved for later removal; other responses should result in error
+		switch response {
+		case "duplicate":
+			fmt.Println("Value descriptor has already been registered.")
+		case "error":
+			panic("Value descriptor couldn't be created.")
+		default:
+			// response is ID of valueDescriptor
+			fmt.Println("Adding value descriptor ID to value descriptors.")
+			valueDescriptorsIDs = append(valueDescriptorsIDs, response)
+		}
 	}
+
 	valueDescriptorsInitialized.Done()
 	subscribeToData()
 }
+
+func cleanUpValueDescriptors() {
+	for _, ID := range valueDescriptorsIDs {
+		reverseCommand := struct {
+			Command string	`json:"command"`
+			Payload string	`json:"payload"`
+		}{
+			"clean_value_descriptors",
+			ID}
+
+		b, err := json.Marshal(reverseCommand)
+		if err != nil {
+			fmt.Println("Couldn't marshal reverse command packet:", string(b))
+		}
+		promptReverseCommand(string(b))
+	}
+}
+
 
 func handleCommand() {
 	for msg := range commands.incoming {
