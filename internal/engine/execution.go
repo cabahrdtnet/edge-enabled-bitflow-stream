@@ -75,7 +75,6 @@ func stdoutReader(stdoutPipe io.ReadCloser) {
 	reader := bufio.NewReader(stdoutPipe)
 	header, err := reader.ReadString('\n')
 	fmt.Println("OUTPUT HEADER: ", header)
-	// TODO this probably does not work as an "\n" is appended by Bitflow... I think...
 
 	line, err := reader.ReadString('\n')
 	fmt.Println("OUTPUT: ", line)
@@ -89,10 +88,10 @@ func stdoutReader(stdoutPipe io.ReadCloser) {
 	if convErr != nil {
 		panic(convErr)
 	}
-	// TODO maybe close this channel
+
 	initial.processedEvent <- event
 	fmt.Println("Waiting for value descriptors to be initialized.")
-	valueDescriptorsInitialized.Wait()
+	valueDescriptors.Initialized.Wait()
 
 	fmt.Println("Publishing initial event: ", event)
 	events.outgoing <- event

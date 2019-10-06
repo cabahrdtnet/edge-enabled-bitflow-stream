@@ -10,21 +10,17 @@ import (
 var (
 	// these values are set in commands/device-bitflow/engine/main.go
 	Config  = configuration{}
-	// TODO rename: read comment below
-	// both are event channels, where
-	// publication == outgoing
-	// subscription == incoming
-	// data should be called events then
-	// TODO IDs from server, which should later be removed from it
-	valueDescriptorsIDs         = []string{}
-	valueDescriptorsInitialized sync.WaitGroup
-	bitflowPipeline             sync.WaitGroup
+
+	valueDescriptors = struct {
+		IDs []string
+		Initialized sync.WaitGroup
+	}{
+		[]string{},
+		sync.WaitGroup{}}
+
+	bitflowPipeline sync.WaitGroup
 )
 
-// TODO channels should contain only converted data, i.e. an event channel would be semantically better
-// TODO implement json commands channel
-
-// these values are set in commands/device-bitflow/engine/main.go
 type configuration struct {
 	EngineName   string
 	Script       string
@@ -48,9 +44,8 @@ func Configure() {
 }
 
 func setup() {
-	valueDescriptorsInitialized.Add(1)
+	valueDescriptors.Initialized.Add(1)
 	bitflowPipeline.Add(1)
-	go subscribeToDataOnce()
 }
 
 func CleanUp() {
@@ -84,7 +79,6 @@ func registerValueDescriptors() {
 		vds = append(vds, vd)
 	}
 
-	// TODO send value descriptor to server one by one, as you need to get an answer for each
 	for _, vd := range vds {
 		reverseCommand := struct {
 			Command string                  `json:"command"`
@@ -100,9 +94,9 @@ func registerValueDescriptors() {
 
 		fmt.Println("Prompt register_value_descriptor reverse command.")
 		promptReverseCommand(string(b))
+
 		fmt.Println("Awaiting ID from server")
 		response := <- reverseCommandResponse.incoming
-		// TODO duplicates are fine; ID needs to be saved for later removal; other responses should result in error
 		switch response {
 		case "duplicate":
 			fmt.Println("Value descriptor has already been registered.")
@@ -111,16 +105,16 @@ func registerValueDescriptors() {
 		default:
 			// response is ID of valueDescriptor
 			fmt.Println("Adding value descriptor ID to value descriptors.")
-			valueDescriptorsIDs = append(valueDescriptorsIDs, response)
+			valueDescriptors.IDs = append(valueDescriptors.IDs, response)
 		}
 	}
 
-	valueDescriptorsInitialized.Done()
+	valueDescriptors.Initialized.Done()
 	subscribeToData()
 }
 
 func cleanUpValueDescriptors() {
-	for _, ID := range valueDescriptorsIDs {
+	for _, ID := range valueDescriptors.IDs {
 		reverseCommand := struct {
 			Command string	`json:"command"`
 			Payload string	`json:"payload"`
@@ -164,11 +158,3 @@ func handlePublicationValue() {
 	}
 	fmt.Println("events.outgoing is closed.")
 }
-
-// MQTT messages
-// sub handler      writesTo  Message.incoming
-// stdin of bitflow readsFrom Message.incoming
-
-// processing
-// stdout of bitflow writesTo  Message.publication
-// handlePublicationValue           readsFrom Message.publication

@@ -35,6 +35,81 @@ var (
 		make(chan string)}
 )
 
+// publish to topic `topic` as publisher `clientID` message `message`
+func pub(topic string, clientID string, msg string) {
+	fmt.Printf("Publishing message `%s` as publisher `%s` to topic `%s`", msg, clientID, topic)
+	opts := MQTT.NewClientOptions()
+	opts.AddBroker(Config.MqttBroker)
+	opts.SetClientID(clientID)
+
+	client := MQTT.NewClient(opts)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+	qos := 0
+	token := client.Publish(Config.OutputTopic, byte(qos), false, msg)
+	token.Wait()
+
+	client.Disconnect(250)
+}
+
+// subscribe to topic `topic` as subscriber `clientID` for `n` messages and call `handler` on received message
+// negative numbers indicate infinite subscription
+func subscribe(topic string, clientID string, n int, handler MQTT.MessageHandler) {
+	opts := MQTT.NewClientOptions()
+	opts.AddBroker(Config.MqttBroker)
+	opts.SetClientID(Config.EngineName + "-event-subscriber")
+
+	receiveCount := 0
+	choke := make(chan [2]string)
+
+	opts.SetDefaultPublishHandler(handler)
+
+	client := MQTT.NewClient(opts)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+
+	qos := 0
+	if token := client.Subscribe(Config.InputTopic, byte(qos), nil); token.Wait() && token.Error() != nil {
+		fmt.Println(token.Error())
+		os.Exit(1)
+	}
+	fmt.Println("Sample n-Subscriber Connected")
+
+	// TODO replace with waitgroup and remove choke channel
+	if n < 0 {
+		for {
+			<-choke
+		}
+	} else {
+		for receiveCount < n {
+			<-choke
+			receiveCount++
+		}
+	}
+
+	// TODO fix broker error msg: Socket error on client engine-0-event-subscriber, disconnecting
+	client.Disconnect(250)
+	fmt.Println("Sample n-Subscriber Disconnected")
+}
+
+// clientID: Config.EngineName + "-event-subscriber"
+// topic:    Config.InputTopic
+// n:        1
+// handler:
+//	func(client MQTT.Client, msg MQTT.Message) {
+//		//choke <- [2]string{msg.Topic(), string(msg.Payload())}
+//		// unmarshal from EdgeX JSON format to EdgeX Event
+//		event := models.Event{}
+//		payload := msg.Payload()
+//		err := json.Unmarshal(payload, &event)
+//		if err == nil {
+//			events.incoming <- event
+//		} else {
+//			fmt.Println("Ignoring message: EdgeX Event JSON data can't be unmarshalled.")
+//		}
+//	}
 func subscribeToDataOnce() {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
@@ -84,6 +159,22 @@ func subscribeToDataOnce() {
 	fmt.Println("Sample 1-Subscriber Disconnected")
 }
 
+// clientID: Config.EngineName + "-event-subscriber"
+// topic:    Config.InputTopic
+// n:        -1
+// handler:
+//	func(client MQTT.Client, msg MQTT.Message) {
+//		//choke <- [2]string{msg.Topic(), string(msg.Payload())}
+//		// unmarshal from EdgeX JSON format to EdgeX Event
+//		event := models.Event{}
+//		payload := msg.Payload()
+//		err := json.Unmarshal(payload, &event)
+//		if err == nil {
+//			events.incoming <- event
+//		} else {
+//			fmt.Println("Ignoring message: EdgeX Event JSON data can't be unmarshalled.")
+//		}
+//	}
 func subscribeToData() {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
@@ -133,6 +224,8 @@ func subscribeToData() {
 	fmt.Println("Sample n-Subscriber Disconnected")
 }
 
+// clientID: Config.EngineName + "-event-publisher"
+// topic:    Config.OutputTopic
 func publish(payload string) {
 	fmt.Println("Sample Publisher Started")
 	opts := MQTT.NewClientOptions()
@@ -158,6 +251,8 @@ func publish(payload string) {
 	fmt.Println("Sample Publisher Disconnected")
 }
 
+// clientID: Config.EngineName + "-reverse-command-publisher"
+// topic:    "bitflow/engine/0/reverse-command"
 func promptReverseCommand(payload string) {
 	fmt.Println("Sample Publisher Started")
 	opts := MQTT.NewClientOptions()
@@ -180,6 +275,22 @@ func promptReverseCommand(payload string) {
 	fmt.Println("Sample Publisher Disconnected")
 }
 
+// clientID: Config.EngineName + "-command-subscriber"
+// topic:    Config.CommandTopic
+// n:        -1
+// handler:
+//	func(client MQTT.Client, msg MQTT.Message) {
+//		//choke <- [2]string{msg.Topic(), string(msg.Payload())}
+//		// unmarshal from EdgeX JSON format to EdgeX Event
+//		event := models.Event{}
+//		payload := msg.Payload()
+//		err := json.Unmarshal(payload, &event)
+//		if err == nil {
+//			events.incoming <- event
+//		} else {
+//			fmt.Println("Ignoring message: EdgeX Event JSON data can't be unmarshalled.")
+//		}
+//	}
 func subscribeToCommand() {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
@@ -220,6 +331,23 @@ func subscribeToCommand() {
 	fmt.Println("Sample Subscriber Disconnected")
 }
 
+
+// clientID: Config.EngineName + "-reverse-command-response-subscriber"
+// topic:    "bitflow/engine/0/reverse-command-response"
+// n:        -1
+// handler:
+//	func(client MQTT.Client, msg MQTT.Message) {
+//		//choke <- [2]string{msg.Topic(), string(msg.Payload())}
+//		// unmarshal from EdgeX JSON format to EdgeX Event
+//		event := models.Event{}
+//		payload := msg.Payload()
+//		err := json.Unmarshal(payload, &event)
+//		if err == nil {
+//			events.incoming <- event
+//		} else {
+//			fmt.Println("Ignoring message: EdgeX Event JSON data can't be unmarshalled.")
+//		}
+//	}
 func subscribeToReverseCommandResponse() {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
