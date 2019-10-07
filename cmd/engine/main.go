@@ -7,22 +7,6 @@ import (
 	"os"
 )
 
-/*
-- script
-- input endpoint
-- output endpoint
-- mqtt broker authority
-- engine name
- */
-// ./engine \
-//// -name="Bitflow-Script-Execution-Engine-0" \
-//// -script="input -> avg() -> append-latency() -> output" \
-//// -input="" \
-//// -output="bitflow/engine/0/data" \
-//// -command="bitflow/engine/0/command" \
-//// -broker="tcp://192.168.178.20:1883" \
-//// -bitflow-args="-v -buf 20000"
-
 func main() {
 	// TODO add possibility to read from toml file
 	// TODO improve robustness of process? e.g. bitflow breaks when header isn't the very first thing to arrive
@@ -33,7 +17,7 @@ func main() {
 	flag.StringVar(&engine.Config.OutputTopic, "output", "", "output MQTT topic")
 	flag.StringVar(&engine.Config.CommandTopic, "command", "", "command MQTT topic")
 	flag.StringVar(&engine.Config.MqttBroker, "broker", "", "mqtt broker authority")
-	flag.StringVar(&engine.Config.Parameters, "bitflow-args", "", "arguments for bitflow-pipeline process")
+	flag.StringVar(&engine.Config.Parameters, "bitflow-params", "", "arguments for bitflow-pipeline process")
 	flag.Parse()
 	fmt.Println(engine.Config)
 
