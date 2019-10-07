@@ -17,11 +17,6 @@ const (
 	layout  = "2006-01-02 15:04:05.000000000"
 )
 
-// current time for timestamps
-var (
-	now = time.Now().UTC().Format(layout)
-)
-
 // header for stream based on readings
 func header(readings []models.Reading) string {
 	header := "time,tags"
@@ -39,7 +34,8 @@ func etos(e models.Event) (string, error) {
 
 	nanos := e.Origin * 1000 * 1000
 	origin := time.Unix(0, nanos).UTC().Format(tLayout)
-	sample := now
+	sample := time.Now().UTC().Format(layout)
+
 	tags := ",origin=" + origin + " " + "device=" + e.Device
 	sample += tags
 
@@ -66,6 +62,7 @@ func stoe(deviceName string, sample string, header string) (models.Event, error)
 	metrics := entries[2:]
 	metricNames := headerEntries[2:]
 
+	now := time.Now().UTC().Format(layout)
 	eventTime, err := time.Parse(layout, now)
 	if err != nil {
 		return models.Event{}, fmt.Errorf("parsing error in stoe: %s", err.Error())
