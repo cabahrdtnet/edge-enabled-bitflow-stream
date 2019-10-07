@@ -227,7 +227,6 @@ func subscribeToData() {
 // clientID: Config.EngineName + "-event-publisher"
 // topic:    Config.OutputTopic
 func publish(payload string) {
-	fmt.Println("Sample Publisher Started")
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
 	opts.SetClientID(Config.EngineName + "-event-publisher")
@@ -248,13 +247,11 @@ func publish(payload string) {
 	}
 
 	client.Disconnect(250)
-	fmt.Println("Sample Publisher Disconnected")
 }
 
 // clientID: Config.EngineName + "-reverse-command-publisher"
 // topic:    "bitflow/engine/0/reverse-command"
 func promptReverseCommand(payload string) {
-	fmt.Println("Sample Publisher Started")
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(Config.MqttBroker)
 	opts.SetClientID(Config.EngineName + "-reverse-command-publisher")
@@ -272,7 +269,6 @@ func promptReverseCommand(payload string) {
 	}
 
 	client.Disconnect(250)
-	fmt.Println("Sample Publisher Disconnected")
 }
 
 // clientID: Config.EngineName + "-command-subscriber"
