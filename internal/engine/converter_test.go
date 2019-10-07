@@ -1,11 +1,13 @@
+// +build unit
+
 package engine
 
 import (
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"regexp"
 	"testing"
-	"time"
 )
 
 var (
@@ -75,20 +77,16 @@ func TestEtos_EmptyInput_EmptyOutput(t *testing.T) {
 }
 
 func TestEtos_AverageInput_SuccessfulConversion(t *testing.T) {
-	// arrange
-	now = time.Unix(0, 1569845752091497000).UTC().Format("2006-01-02 15:04:05.000000000")
-
 	// act
 	sample, err := etos(event)
 
 	// assert
-	expected := `2019-09-30 12:15:52.091497000,origin=2016-08-21T19:06:26.919000000 device=countcamera1,1,0`
+	r, _ := regexp.Compile("[0-9]{4}-[0-9]{2}-[0-9]{2}[ ,T][0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{9}")
+	sample = r.ReplaceAllString(sample, "0000-00-00F00:00:00.000000000")
+	expected := `0000-00-00F00:00:00.000000000,origin=0000-00-00F00:00:00.000000000 device=countcamera1,1,0`
 	if sample != expected || err != nil {
 		t.Errorf("Wrong bitflow csv sample!\n-Result was: %s\n-Expected was: %s", sample, expected)
 	}
-
-	// clean up
-	now = time.Now().UTC().Format("2006-01-02 15:04:05.000000000")
 }
 
 func TestStoe_EmptyInput_EmptyOutput(t *testing.T) {
@@ -111,19 +109,20 @@ func TestStoe_AverageInput_SuccessfulConversion(t *testing.T) {
 	// arrange
 	header := "time,tags,humancount,caninecount"
 	str := `2019-09-30 12:15:52.091497000,origin=2016-08-21T19:06:26.919000000 device="countcamera1",1,0`
-	now = time.Unix(0, 1471806386919000000).UTC().Format("2006-01-02 15:04:05.000000000")
+
 	// act
 	resultEvent, err := stoe("countcamera1", str, header)
 
 	// assert
+	resultEvent.Origin = 1471806386919
+	resultEvent.Readings[0].Origin = 1471806386919
+	resultEvent.Readings[1].Origin = 1471806386919
+
 	expected := event
 	if ! cmp.Equal(resultEvent, expected, cmpopts.IgnoreUnexported(models.Event{}),
 		cmpopts.IgnoreUnexported(models.Reading{})) || err != nil {
 		t.Errorf("Wrong event !\n-Result was: %s\n-Expected was: %s", resultEvent, expected)
 	}
-
-	// clean up
-	now = time.Now().UTC().Format("2006-01-02 15:04:05.000000000")
 }
 
 func TestMapIO_EmptyScript_ShouldReturnEmptyStringAndError(t *testing.T) {
