@@ -20,9 +20,10 @@ var (
 	// timing variable for potential manual test observation
 	startTime  = time.Second * 3
 	timeBetweenEvents = time.Millisecond * 100
-	eventCount = 30 // timer
+	eventCount = 100
+
+	// connection
 	brokerPort = "18833"
-	//brokerIP   = "192.168.178.20"
 	brokerIP = "127.0.0.1"
 
 	// test data
