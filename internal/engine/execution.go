@@ -38,7 +38,6 @@ func Run() int {
 	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
-	bitflowPipeline.Done()
 
 	return cmd.ProcessState.ExitCode()
 }

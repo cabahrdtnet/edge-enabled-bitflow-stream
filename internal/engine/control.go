@@ -12,13 +12,11 @@ var (
 	Config  = configuration{}
 
 	valueDescriptors = struct {
-		IDs []string
-		Initialized sync.WaitGroup
+		IDs []string                // IDs of created Value Descriptors in EdgeX
+		Initialized sync.WaitGroup  // synced access of receiving events after initializing value descriptors
 	}{
 		[]string{},
 		sync.WaitGroup{}}
-
-	bitflowPipeline sync.WaitGroup
 )
 
 type configuration struct {
@@ -33,24 +31,49 @@ type configuration struct {
 
 // apply configuration for a run
 func Configure() {
-	setup()
+	valueDescriptors.Initialized.Add(1)
 	go registerValueDescriptors()
-	go subscribeToDataOnce()
 
-	go subscribeToCommand()
-	go subscribeToReverseCommandResponse()
+	go initHeaderSubscription()
+	go initEventSubscription()
+	go initCommandSubscription()
+	go initReverseCommandResponseSubscription()
 
 	go handleCommand()
 	go handlePublicationValue()
 }
 
-func setup() {
-	valueDescriptors.Initialized.Add(1)
-	bitflowPipeline.Add(1)
-}
-
 func CleanUp() {
 	cleanUpValueDescriptors()
+}
+
+// initializes one-off subscription for first event
+func initHeaderSubscription() {
+	subscriber.event = subscribe(Config.InputTopic,
+		Config.EngineName + "-event-subscriber",
+		handleInitialEventMessage)
+}
+
+// initializes event subscription beginning with the second event
+func initEventSubscription() {
+	valueDescriptors.Initialized.Wait()
+	subscriber.event = subscribe(Config.InputTopic,
+		Config.EngineName + "-event-subscriber",
+		handleEventMessage)
+}
+
+// initializes command subscription for commands from device service to device
+func initCommandSubscription() {
+	subscriber.command = subscribe(Config.CommandTopic,
+		Config.EngineName + "-command-subscriber",
+		handleCommandMessage)
+}
+
+// initializes reverse command subscription for commands from device to device service
+func initReverseCommandResponseSubscription() {
+	subscriber.reverseCommand = subscribe("bitflow/engine/0/reverse-command-response",
+		Config.EngineName + "-reverse-command-response-subscriber",
+		handleReverseCommandMessage)
 }
 
 // register value descriptors for EdgeX
@@ -94,7 +117,9 @@ func registerValueDescriptors() {
 		}
 
 		fmt.Println("Prompt register_value_descriptor reverse command.")
-		promptReverseCommand(string(b))
+
+		msg := string(b)
+		publish("bitflow/engine/0/reverse-command", Config.EngineName + "-reverse-command-publisher", msg)
 
 		fmt.Println("Awaiting ID from server")
 		response := <- reverseCommandResponse.incoming
@@ -111,7 +136,6 @@ func registerValueDescriptors() {
 	}
 
 	valueDescriptors.Initialized.Done()
-	subscribeToData()
 }
 
 func cleanUpValueDescriptors() {
@@ -124,10 +148,13 @@ func cleanUpValueDescriptors() {
 			ID}
 
 		b, err := json.Marshal(reverseCommand)
+		msg := string(b)
 		if err != nil {
-			fmt.Println("Couldn't marshal reverse command packet:", string(b))
+			fmt.Println("Couldn't marshal reverse command message:", msg)
 		}
-		promptReverseCommand(string(b))
+		publish("bitflow/engine/0/reverse-command",
+			Config.EngineName + "-reverse-command-publisher",
+			msg)
 	}
 }
 
@@ -140,6 +167,9 @@ func handleCommand() {
 			fmt.Println("Closing channels...")
 			close(events.incoming)
 			close(commands.incoming)
+			disconnect(subscriber.event)
+			disconnect(subscriber.command)
+			disconnect(subscriber.reverseCommand)
 			fmt.Println("Channels closed. Shutting down now.")
 		default:
 			fmt.Println("Ignoring unknown command.")
@@ -154,8 +184,8 @@ func handlePublicationValue() {
 		if err != nil {
 			fmt.Println("Ignoring event: EdgeX Event can't be marshalled.")
 		}
-		message := string(payload)
-		publish(message)
+		msg := string(payload)
+		publish(Config.OutputTopic, Config.EngineName + "-event-publisher", msg)
 	}
 	fmt.Println("events.outgoing is closed.")
 }
