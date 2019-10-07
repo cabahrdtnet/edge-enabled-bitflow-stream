@@ -35,6 +35,7 @@ type configuration struct {
 func Configure() {
 	setup()
 	go registerValueDescriptors()
+	go subscribeToDataOnce()
 
 	go subscribeToCommand()
 	go subscribeToReverseCommandResponse()
@@ -119,7 +120,7 @@ func cleanUpValueDescriptors() {
 			Command string	`json:"command"`
 			Payload string	`json:"payload"`
 		}{
-			"clean_value_descriptors",
+			"clean_value_descriptor",
 			ID}
 
 		b, err := json.Marshal(reverseCommand)
