@@ -50,18 +50,7 @@ RUN git fetch --all --tags --prune
 
 RUN git checkout tags/v0.0.47
 
-RUN pwd
-
-RUN ls -lshat ./cmd/
-
-RUN ls -lshat ./cmd/bitflow-pipeline
-
 RUN go build -o ./cmd/bitflow-pipeline/bitflow-pipeline ./cmd/bitflow-pipeline
-
-RUN ls -lshat ./cmd/bitflow-pipeline
-
-RUN ls -lshat /go/src/github.com/datenente/device-bitflow/cmd/engine/
-RUN ls -lshat /go/src/github.com/bitflow-stream/go-bitflow/cmd/bitflow-pipeline/
 
 # Next image - Copy built Go binary into new workspace
 FROM alpine:3.10 
@@ -76,7 +65,5 @@ EXPOSE $APP_PORT
 WORKDIR /
 COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/engine/engine /usr/local/bin/engine
 COPY --from=builder /go/src/github.com/bitflow-stream/go-bitflow/cmd/bitflow-pipeline/bitflow-pipeline /usr/local/bin/bitflow-pipeline
-
-RUN ls -lshat /usr/local/bin
 
 ENTRYPOINT [ "/usr/local/bin/engine" ]
