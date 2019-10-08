@@ -11,9 +11,6 @@ FROM golang:1.13-alpine AS builder
 ENV GO111MODULE=on
 WORKDIR /go/src/github.com/datenente/device-bitflow
 
-LABEL license='SPDX-License-Identifier: MIT' \
-  copyright='Copyright (c) 2019: Christian Alexander Bahrdt'
-
 RUN sed -e 's/dl-cdn[.]alpinelinux.org/nl.alpinelinux.org/g' -i~ /etc/apk/repositories
 
 # add git for go modules
@@ -25,20 +22,61 @@ RUN go mod download
 
 COPY . .
 
-RUN make build
+RUN make build-engine
+
+#nocomm
+#FROM golang:1.13-alpine AS pipeline
+
+ENV GO111MODULE=on
+WORKDIR /go/src/github.com/bitflow-stream/
+
+#nocomm
+#RUN sed -e 's/dl-cdn[.]alpinelinux.org/nl.alpinelinux.org/g' -i~ /etc/apk/repositories
+
+# add git for go modules
+#nocomm
+#RUN apk update && apk add make git
+
+# taken from https://github.com/bitflow-stream/go-bitflow/blob/v0.0.47/Dockerfile
+RUN apk --no-cache add git gcc g++ musl-dev
+
+RUN pwd
+
+RUN git clone https://github.com/bitflow-stream/go-bitflow
+
+WORKDIR /go/src/github.com/bitflow-stream/go-bitflow
+
+RUN git fetch --all --tags --prune
+
+RUN git checkout tags/v0.0.47
+
+RUN pwd
+
+RUN ls -lshat ./cmd/
+
+RUN ls -lshat ./cmd/bitflow-pipeline
+
+RUN go build -o ./cmd/bitflow-pipeline/bitflow-pipeline ./cmd/bitflow-pipeline
+
+RUN ls -lshat ./cmd/bitflow-pipeline
+
+RUN ls -lshat /go/src/github.com/datenente/device-bitflow/cmd/engine/
+RUN ls -lshat /go/src/github.com/bitflow-stream/go-bitflow/cmd/bitflow-pipeline/
 
 # Next image - Copy built Go binary into new workspace
-FROM scratch
+FROM alpine:3.10 
 
-LABEL license='SPDX-License-Identifier: MIT' \
-  copyright='Copyright (c) 2019: Christian Alexander Bahrdt'
+# taken from https://github.com/bitflow-stream/go-bitflow/blob/v0.0.47/Dockerfile
+# RUN apk --no-cache add libstdc++
 
 ENV APP_PORT=49995
 #expose command data port
 EXPOSE $APP_PORT
 
 WORKDIR /
-COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/device-bitflow/device-bitflow /usr/local/bin/device-bitflow
-COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/device-bitflow/res/docker/configuration.toml /res/docker/configuration.toml
+COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/engine/engine /usr/local/bin/engine
+COPY --from=builder /go/src/github.com/bitflow-stream/go-bitflow/cmd/bitflow-pipeline/bitflow-pipeline /usr/local/bin/bitflow-pipeline
 
-CMD [ "/usr/local/bin/device-bitflow","--profile=docker","--confdir=/res"]
+RUN ls -lshat /usr/local/bin
+
+ENTRYPOINT [ "/usr/local/bin/engine" ]

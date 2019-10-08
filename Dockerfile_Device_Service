@@ -26,7 +26,7 @@ RUN go mod download
 
 COPY . .
 
-RUN make build
+RUN make build-service
 
 # Next image - Copy built Go binary into new workspace
 FROM scratch
@@ -42,4 +42,4 @@ WORKDIR /
 COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/device-bitflow/device-bitflow /usr/local/bin/device-bitflow
 COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/device-bitflow/res/docker/configuration.toml /res/docker/configuration.toml
 
-CMD [ "/usr/local/bin/device-bitflow","--profile=docker","--confdir=/res"]
+ENTRYPOINT [ "/usr/local/bin/device-bitflow","--profile=docker","--confdir=/res"]
