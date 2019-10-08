@@ -5,7 +5,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// This package provides a simple example of a device service.
+// CHANGED BY CHRISTIAN ALEXANDER BAHRDT
+// this file is derivative of
+// https://github.com/edgexfoundry/device-sdk-go/blob/edinburgh/example/cmd/device-simple/main.go
 package main
 
 import (

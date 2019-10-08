@@ -1,12 +1,15 @@
+# CHANGED BY CHRISTIAN ALEXANDER BAHRDT
+# This file is derivative from the following file 
+# https://github.com/edgexfoundry/device-sdk-go/blob/edinburgh/example/cmd/device-simple/res/docker/configuration.toml
 [Writable]
 LogLevel = 'INFO'
 
 [Service]
-Host = "device-simple"
-Port = 49990
+Host = "device-bitflow"
+Port = 49995
 ConnectRetries = 20
 Labels = []
-OpenMsg = "device simple started"
+OpenMsg = "device bitflow started"
 Timeout = 5000
 EnableAsyncReadings = true
 AsyncBufferSize = 16
@@ -52,23 +55,4 @@ FailWaitTime = 10
 
 [Logging]
 EnableRemote = true
-File = "/edgex/logs/device-simple.log"
-
-# Pre-define Devices
-[[DeviceList]]
-  Name = "Simple-Device01"
-  Profile = "Simple-Device"
-  Description = "Example of Simple Device"
-  Labels = [ "industrial" ]
-  [DeviceList.Protocols]
-    [DeviceList.Protocols.other]
-      Address = "simple01"
-      Port = "300"
-  [[DeviceList.AutoEvents]]
-    Frequency = "10s"
-    OnChange = false
-    Resource = "Switch"
-  [[DeviceList.AutoEvents]]
-    Frequency = "30s"
-    OnChange = false
-    Resource = "Image"
+File = "/edgex/logs/device-bitflow.log"

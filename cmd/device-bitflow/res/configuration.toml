@@ -1,3 +1,6 @@
+# CHANGED BY CHRISTIAN ALEXANDER BAHRDT
+# This file is derivative from the following file 
+# https://github.com/edgexfoundry/device-sdk-go/blob/edinburgh/example/cmd/device-simple/res/configuration.toml
 [Writable]
 LogLevel = 'DEBUG'
 

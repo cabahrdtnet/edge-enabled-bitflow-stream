@@ -1,0 +1,16 @@
+The following open source projects are referenced by this project:
+
+edgexfoundry/go-mod-core-contracts (Apache-2.0) https://github.com/edgexfoundry/go-mod-core-contracts 
+https://github.com/edgexfoundry/go-mod-core-contracts/blob/master/LICENSE
+
+edgexfoundry/device-sdk-go (Apache-2.0) https://github.com/edgexfoundry/device-sdk-go
+https://github.com/edgexfoundry/device-sdk-go/blob/master/LICENSE
+
+eclipse/paho.mqtt.golang (Apache-2.0) https://github.com/eclipse/paho.mqtt.golang
+https://github.com/eclipse/paho.mqtt.golang/blob/master/LICENSE
+
+google/go-cmp (BSD-3-Clause) https://github.com/google/go-cmp 
+https://github.com/google/go-cmp/blob/master/LICENSE
+
+(Idea to this file is taken from https://github.com/edgexfoundry where this file called Attribution.txt is used in several
+repositories)

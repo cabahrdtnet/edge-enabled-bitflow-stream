@@ -1,0 +1,44 @@
+#
+# Copyright (c) 2018, 2019 Intel
+#
+# SPDX-License-Identifier: Apache-2.0
+# 
+# CHANGED BY CHRISTIAN ALEXANDER BAHRDT
+# This file is derivative from the following file 
+# https://github.com/edgexfoundry/device-sdk-go/blob/edinburgh/example/cmd/device-simple/Dockerfile
+FROM golang:1.13-alpine AS builder
+
+ENV GO111MODULE=on
+WORKDIR /go/src/github.com/datenente/device-bitflow
+
+LABEL license='SPDX-License-Identifier: MIT' \
+  copyright='Copyright (c) 2019: Christian Alexander Bahrdt'
+
+RUN sed -e 's/dl-cdn[.]alpinelinux.org/nl.alpinelinux.org/g' -i~ /etc/apk/repositories
+
+# add git for go modules
+RUN apk update && apk add make git
+
+COPY go.mod .
+
+RUN go mod download
+
+COPY . .
+
+RUN make build
+
+# Next image - Copy built Go binary into new workspace
+FROM scratch
+
+LABEL license='SPDX-License-Identifier: MIT' \
+  copyright='Copyright (c) 2019: Christian Alexander Bahrdt'
+
+ENV APP_PORT=49995
+#expose command data port
+EXPOSE $APP_PORT
+
+WORKDIR /
+COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/device-bitflow/device-bitflow /usr/local/bin/device-bitflow
+COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/device-bitflow/res/docker/configuration.toml /res/docker/configuration.toml
+
+CMD [ "/usr/local/bin/device-bitflow","--profile=docker","--confdir=/res"]
