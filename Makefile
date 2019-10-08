@@ -2,7 +2,9 @@
 # This file is derivative from the following file 
 # https://github.com/edgexfoundry/device-sdk-go/blob/edinburgh/Makefile
 
-.PHONY: build run test clean docker-device-bitflow docker-engine
+.PHONY: run test clean
+.PHONY: build build-engine build-service
+.PHONY: docker docker-device-bitflow docker-engine
 
 GO=CGO_ENABLED=0 GO111MODULE=on go
 
@@ -17,10 +19,13 @@ GOFLAGS=-ldflags "-X github.com/datenente/device-bitflow.Version=$(VERSION)"
 
 GIT_SHA=$(shell git rev-parse HEAD)
 
-build: $(SERVICE)
+build: $(SERVICE) $(ENGINE)
 	$(GO) install -tags=safe
 
 build-engine: $(ENGINE)
+	$(GO) install -tags=safe
+
+build-service: $(ENGINE)
 	$(GO) install -tags=safe
 
 cmd/device-bitflow/device-bitflow:
@@ -28,6 +33,9 @@ cmd/device-bitflow/device-bitflow:
 
 cmd/engine/engine:
 	$(GO) build $(GOFLAGS) -o $@ ./cmd/engine
+
+docker: docker-device-bitflow docker-engine
+	echo "docker..."
 
 docker-device-bitflow:
 	docker build \
@@ -41,8 +49,8 @@ docker-engine:
 	docker build \
 		-f ./Dockerfile_Script_Execution_Engine \
 		--label "git_sha=$(GIT_SHA)" \
-		-t datenente/docker-device-bitflow-script-execution-engine:$(GIT_SHA) \
-		-t datenente/docker-device-bitflow-script-execution-engine:$(VERSION)-dev \
+		-t datenente/docker-device-bitflow-engine:$(GIT_SHA) \
+		-t datenente/docker-device-bitflow-engine:$(VERSION)-dev \
         .
 
 run:
