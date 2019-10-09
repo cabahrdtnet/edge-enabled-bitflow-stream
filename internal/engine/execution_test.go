@@ -63,6 +63,8 @@ func TestRun_AverageCase_SuccessfulRun(t *testing.T) {
 	Config.InputTopic = "engine-test/countcamera1/humancount"
 	Config.OutputTopic = "bitflow/engine/0/data"
 	Config.CommandTopic = "bitflow/engine/0/command"
+	Config.ReverseCommandTopic = "bitflow/engine/0/reverse-command"
+	Config.ReverseCommandResponseTopic = "bitflow/engine/0/reverse-command-response"
 	Config.MqttBroker = "tcp://" + brokerIP + ":" + brokerPort
 	Config.Parameters = "-v -buf 20000"
 

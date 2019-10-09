@@ -26,6 +26,8 @@ type configuration struct {
 	InputTopic   string
 	OutputTopic  string
 	CommandTopic string
+	ReverseCommandTopic string
+	ReverseCommandResponseTopic string
 	MqttBroker   string
 }
 
@@ -71,7 +73,7 @@ func initCommandSubscription() {
 
 // initializes reverse command subscription for commands from device to device service
 func initReverseCommandResponseSubscription() {
-	subscriber.reverseCommand = subscribe("bitflow/engine/0/reverse-command-response",
+	subscriber.reverseCommand = subscribe(Config.ReverseCommandResponseTopic,
 		Config.EngineName + "-reverse-command-response-subscriber",
 		handleReverseCommandMessage)
 }
@@ -119,7 +121,8 @@ func registerValueDescriptors() {
 		fmt.Println("Prompt register_value_descriptor reverse command.")
 
 		msg := string(b)
-		publish("bitflow/engine/0/reverse-command", Config.EngineName + "-reverse-command-publisher", msg)
+		// TODO refactor and get from command line
+		publish(Config.ReverseCommandTopic, Config.EngineName + "-reverse-command-publisher", msg)
 
 		fmt.Println("Awaiting ID from server")
 		response := <- reverseCommandResponse.incoming
@@ -152,7 +155,7 @@ func cleanUpValueDescriptors() {
 		if err != nil {
 			fmt.Println("Couldn't marshal reverse command message:", msg)
 		}
-		publish("bitflow/engine/0/reverse-command",
+		publish(Config.ReverseCommandTopic,
 			Config.EngineName + "-reverse-command-publisher",
 			msg)
 	}

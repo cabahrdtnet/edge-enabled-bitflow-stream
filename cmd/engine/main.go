@@ -16,6 +16,8 @@ func main() {
 	flag.StringVar(&engine.Config.InputTopic, "input", "", "input MQTT topic")
 	flag.StringVar(&engine.Config.OutputTopic, "output", "", "output MQTT topic")
 	flag.StringVar(&engine.Config.CommandTopic, "command", "", "command MQTT topic")
+	flag.StringVar(&engine.Config.ReverseCommandTopic, "reverse-command", "", "reverse command MQTT topic")
+	flag.StringVar(&engine.Config.ReverseCommandResponseTopic, "reverse-command-response", "", "reverse command response MQTT topic")
 	flag.StringVar(&engine.Config.MqttBroker, "broker", "", "mqtt broker authority")
 	flag.StringVar(&engine.Config.Parameters, "bitflow-params", "", "arguments for bitflow-pipeline process")
 	flag.Parse()
