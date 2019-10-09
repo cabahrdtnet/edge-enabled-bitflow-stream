@@ -1,4 +1,4 @@
-name: "Bitflow-Script-Execution-Device"
+name: "Bitflow-Script-Execution-Engine"
 manufacturer: "TUB-FakIV-CIT"
 model: "Device-Bitflow-v1"
 labels:
@@ -7,8 +7,8 @@ description: "Device that executes bitflow scripts."
 
 deviceResources:
   -
-    name: "status"
-    description: "status of the script inside the script execution environment"
+    name: "control"
+    description: "lets user start and stop a script execution engine"
     properties:
       value:
         { type: "String", readWrite: "R", defaultValue: ""}
@@ -25,8 +25,8 @@ deviceResources:
         { type: "String", readWrite: "R", defaultValue: "" }
 
   -
-    name: "device_profile"
-    description: "name of device profile as placeholder for devices whose readings are streamed to the script"
+    name: "devices"
+    description: "device list as placeholder whose readings are streamed to the script"
     properties:
       value:
         { type: "String", readWrite: "W", defaultValue: "" }
@@ -34,26 +34,8 @@ deviceResources:
         { type: "String", readWrite: "R", defaultValue: "" }
 
   -
-    name: "offloading_left_operand"
-    description: "left operand of dyadic offloading operator"
-    properties:
-      value:
-        { type: "String", readWrite: "W", defaultValue: "" }
-      units:
-        { type: "String", readWrite: "R", defaultValue: "" }
-
-  -
-    name: "offloading_operator"
-    description: "dyadic offloading operator describes condition when to offload"
-    properties:
-      value:
-        { type: "String", readWrite: "W", defaultValue: "" }
-      units:
-        { type: "String", readWrite: "R", defaultValue: "" }
-
-  -
-    name: "offloading_right_operand"
-    description: "right operand of dyadic offloading operator"
+    name: "value_descriptors"
+    description: "value descriptor list whose readings are streamed to the script"
     properties:
       value:
         { type: "String", readWrite: "W", defaultValue: "" }
@@ -65,13 +47,22 @@ deviceResources:
     description: "name of another device that is acted upon"
     properties:
       value:
-        { type: "String", readWrite: "W", defaultValue: "device-empty" }
+        { type: "String", readWrite: "W", defaultValue: "" }
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
   -
-    name: "command"
-    description: "command of actuation_device that is executed if the actuation_condition is fulfilled"
+    name: "command_name"
+    description: "name of command of actuation_device that is executed if the actuation_condition is fulfilled"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "command_body"
+    description: "command_body of command with command_name of actuation_device that is executed if the actuation_condition is fulfilled"
     properties:
       value:
         { type: "String", readWrite: "W", defaultValue: "" }
@@ -105,13 +96,20 @@ deviceResources:
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
+  -
+    name: "condition"
+    description: "go function with signature: func offload() string, returning local or remote "
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "func offload() string { return \"local\" }" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
 deviceCommands:
   -
     name: "control"
-    get:
-      - { operation: "get", object: "status", parameter: "status" }
     set:
-      - { operation: "set", object: "status", parameter: "status" }
+      - { operation: "set", object: "control", parameter: "control" }
 
   -
     name: "script"
@@ -119,44 +117,33 @@ deviceCommands:
       - { operation: "set", object: "contents", parameter: "contents" }
 
   -
-    name: "input"
+    name: "source"
     set:
-      - { operation: "set", object: "device_profile", parameter: "device_profile" }
+      - { index: "1", operation: "set", object: "devices", parameter: "devices" }
+      - { index: "2", operation: "set", object: "value_descriptors", parameter: "value_descriptors" }
 
   -
     name: "actuation"
     set:
-      - { index: "1", operation: "set", object: "command", parameter: "command" }
-      - { index: "2", operation: "set", object: "actuation_device", parameter: "actuation_device" }
-      - { index: "3", operation: "set", object: "actuation_left_operand", parameter: "actuation_left_operand" }
-      - { index: "4", operation: "set", object: "actuation_operator", parameter: "actuation_operator" }
-      - { index: "5", operation: "set", object: "actuation_right_operand", parameter: "actuation_right_operand" }
+      - { index: "1", operation: "set", object: "command_name", parameter: "command_name" }
+      - { index: "2", operation: "set", object: "command_body", parameter: "command_body" }
+      - { index: "3", operation: "set", object: "actuation_device", parameter: "actuation_device" }
+      - { index: "4", operation: "set", object: "actuation_left_operand", parameter: "actuation_left_operand" }
+      - { index: "5", operation: "set", object: "actuation_operator", parameter: "actuation_operator" }
+      - { index: "6", operation: "set", object: "actuation_right_operand", parameter: "actuation_right_operand" }
 
   -
     name: "offloading"
     set:
-      - { index: "1", operation: "set", object: "offloading_left_operand", parameter: "offloading_left_operand" }
-      - { index: "2", operation: "set", object: "offloading_operator", parameter: "offloading_operator" }
-      - { index: "3", operation: "set", object: "offloading_right_operand", parameter: "offloading_right_operand" }
+      - { index: "1", operation: "set", object: "condition", parameter: "condition" }
 
 # TODO think about correct http codes
 coreCommands:
   -
     name: "control"
-    get:
-      path: "/api/v1/device/{deviceId}/control"
-      responses:
-        -
-          code: "200"
-          description: "get current status of bitflow script execution engine"
-          expectedValues: ["status"]
-        -
-          code: "500"
-          description: "internal server error"
-          expectedValues: []
     put:
       path: "/api/v1/device/{deviceId}/control"
-      parameterNames: ["status"]
+      parameterNames: ["control"]
       responses:
         -
           code: "204"
@@ -171,7 +158,7 @@ coreCommands:
     name: "script"
     put:
       path: "/api/v1/device/{deviceId}/script"
-      parameterNames: ["script"]
+      parameterNames: ["contents"]
       responses:
         -
           code: "204"
@@ -183,14 +170,14 @@ coreCommands:
           expectedValues: []
 
   -
-    name: "input"
+    name: "source"
     put:
-      path: "/api/v1/device/{deviceId}/input"
-      parameterNames: ["device_profile"]
+      path: "/api/v1/device/{deviceId}/source"
+      parameterNames: ["devices","value_descriptors"]
       responses:
         -
           code: "204"
-          description: "set input data (device profile name) of script in bitflow script execution engine"
+          description: "device name and value descriptor list, special syntax for device profile starting device with device_profile:"
           expectedValues: []
         -
           code: "500"
@@ -201,7 +188,7 @@ coreCommands:
     name: "actuation"
     put:
       path: "/api/v1/device/{deviceId}/actuation"
-      parameterNames: ["command", "actuation_device", "actuation_left_operand", "actuation_operator", "actuation_right_operand"]
+      parameterNames: ["command_name", "body", "actuation_device", "actuation_left_operand", "actuation_operator", "actuation_right_operand"]
       responses:
         -
           code: "204"
@@ -216,7 +203,7 @@ coreCommands:
     name: "offloading"
     put:
       path: "/api/v1/device/{deviceId}/offloading"
-      parameterNames: ["offloading_left_operand", "offloading_operator", "offloading_right_operand"]
+      parameterNames: ["condition"]
       responses:
         -
           code: "204"
