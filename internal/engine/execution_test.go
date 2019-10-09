@@ -48,20 +48,12 @@ func TestRun_AverageCase_SuccessfulRun(t *testing.T) {
 		}
 	}()
 	arrange()
-	// docker
-
-	// ./engine -name="engine-0" -script="input -> avg() -> append_latency() -> output" \
-	// -input="edgex/countcamera1/humancount" \
-	// -output="bitflow/engine/0/data" \
-	// -command="bitflow/engine/0/command" \
-	// -broker="tcp://192.168.178.20:1883" \
-	// -bitflow-params="-v -buf 20000"
 
 	// act
 	Config.EngineName = "engine-0"
 	Config.Script = `input -> avg() -> output`
-	Config.InputTopic = "engine-test/countcamera1/humancount"
-	Config.OutputTopic = "bitflow/engine/0/data"
+	Config.InputTopic = "bitflow/engine/0/source"
+	Config.OutputTopic = "bitflow/engine/0/sink"
 	Config.CommandTopic = "bitflow/engine/0/command"
 	Config.ReverseCommandTopic = "bitflow/engine/0/reverse-command"
 	Config.ReverseCommandResponseTopic = "bitflow/engine/0/reverse-command-response"
@@ -150,7 +142,7 @@ func publishEvents() {
 		timer := time.NewTimer(timeBetweenEvents)
 		<-timer.C
 		fmt.Printf("[engine-test] sending event number: %d\n", i)
-		topic := "engine-test/countcamera1/humancount"
+		topic := "bitflow/engine/0/source"
 		subscriber := "engine-test-data-publisher"
 		msg := `{"device":"countcamera1","origin":1471806386919, "readings":[{"name":"humancount","value":"142542","origin":1471806386919},{"name":"caninecount","value":"234523450","origin":1471806386919}]}`
 		mosquittoPub := []string{"mosquitto_pub",
@@ -206,7 +198,7 @@ func subscribeReverseCommand() {
 }
 
 func subscribeProcessedEvents() {
-	topic := "bitflow/engine/0/data"
+	topic := "bitflow/engine/0/sink"
 	subscriber := "engine-test-processed-event-subscriber"
 	mosquittoSub := []string{"mosquitto_sub",
 		"-p", brokerPort, "-i", subscriber, "-t", topic}
