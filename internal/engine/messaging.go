@@ -3,9 +3,9 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/datenente/device-bitflow/internal/communication"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
-	"os"
 )
 
 var (
@@ -41,56 +41,6 @@ var (
 	}{}
 )
 
-// publish to topic `topic` as publisher `clientID` message `message`
-func publish(topic string, clientID string, msg string) {
-	fmt.Printf("Publishing message `%s` as publisher `%s` to topic `%s`\n", msg, clientID, topic)
-	opts := MQTT.NewClientOptions()
-	opts.AddBroker(Config.MqttBroker)
-	opts.SetClientID(clientID)
-
-	client := MQTT.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
-	}
-	qos := 0
-	token := client.Publish(topic, byte(qos), false, msg)
-	token.Wait()
-
-	client.Disconnect(250)
-}
-
-// subscribe to topic `topic` as subscriber `clientID` and call `handler` on received message
-// boolean choke channel can be used to terminate the subscription
-func subscribe(topic string, clientID string, handler MQTT.MessageHandler) MQTT.Client {
-	fmt.Printf("Subscribing to `%s` as `%s`.\n", topic, clientID)
-	opts := MQTT.NewClientOptions()
-	opts.AddBroker(Config.MqttBroker)
-	opts.SetClientID(clientID)
-
-	opts.SetDefaultPublishHandler(handler)
-
-	client := MQTT.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
-	}
-
-	qos := 0
-	if token := client.Subscribe(topic, byte(qos), nil); token.Wait() && token.Error() != nil {
-		fmt.Println(token.Error())
-		os.Exit(1)
-	}
-
-	return client
-}
-
-// disconnect `client`
-func disconnect(client MQTT.Client) {
-	client.Disconnect(250)
-	optReader := client.OptionsReader()
-	fmt.Printf("Cancel subscription of client `%s`.\n",
-		optReader.ClientID())
-}
-
 // handles initial event messages that the input header is drawn from
 func handleInitialEventMessage(client MQTT.Client, msg MQTT.Message) {
 	// unmarshal from EdgeX JSON format to EdgeX Event
@@ -102,7 +52,7 @@ func handleInitialEventMessage(client MQTT.Client, msg MQTT.Message) {
 	} else {
 		fmt.Println("Ignoring message: EdgeX Event JSON data can't be unmarshalled.")
 	}
-	disconnect(subscriber.event)
+	communication.Disconnect(subscriber.event)
 }
 
 // handle every event message beginning from the second event

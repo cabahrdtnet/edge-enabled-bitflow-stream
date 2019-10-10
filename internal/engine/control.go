@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/datenente/device-bitflow/internal/communication"
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
 	"sync"
 )
@@ -33,6 +34,7 @@ type configuration struct {
 
 // apply configuration for a run
 func Configure() {
+	communication.Broker = Config.MqttBroker
 	valueDescriptors.Initialized.Add(1)
 	go registerValueDescriptors()
 
@@ -51,7 +53,7 @@ func CleanUp() {
 
 // initializes one-off subscription for first event
 func initHeaderSubscription() {
-	subscriber.event = subscribe(Config.InputTopic,
+	subscriber.event = communication.Subscribe(Config.InputTopic,
 		Config.EngineName + "-event-subscriber",
 		handleInitialEventMessage)
 }
@@ -59,21 +61,21 @@ func initHeaderSubscription() {
 // initializes event subscription beginning with the second event
 func initEventSubscription() {
 	valueDescriptors.Initialized.Wait()
-	subscriber.event = subscribe(Config.InputTopic,
+	subscriber.event = communication.Subscribe(Config.InputTopic,
 		Config.EngineName + "-event-subscriber",
 		handleEventMessage)
 }
 
 // initializes command subscription for commands from device service to device
 func initCommandSubscription() {
-	subscriber.command = subscribe(Config.CommandTopic,
+	subscriber.command = communication.Subscribe(Config.CommandTopic,
 		Config.EngineName + "-command-subscriber",
 		handleCommandMessage)
 }
 
 // initializes reverse command subscription for commands from device to device service
 func initReverseCommandResponseSubscription() {
-	subscriber.reverseCommand = subscribe(Config.ReverseCommandResponseTopic,
+	subscriber.reverseCommand = communication.Subscribe(Config.ReverseCommandResponseTopic,
 		Config.EngineName + "-reverse-command-response-subscriber",
 		handleReverseCommandMessage)
 }
@@ -122,7 +124,7 @@ func registerValueDescriptors() {
 
 		msg := string(b)
 		// TODO refactor and get from command line
-		publish(Config.ReverseCommandTopic, Config.EngineName + "-reverse-command-publisher", msg)
+		communication.Publish(Config.ReverseCommandTopic, Config.EngineName + "-reverse-command-publisher", msg)
 
 		fmt.Println("Awaiting ID from server")
 		response := <- reverseCommandResponse.incoming
@@ -155,7 +157,7 @@ func cleanUpValueDescriptors() {
 		if err != nil {
 			fmt.Println("Couldn't marshal reverse command message:", msg)
 		}
-		publish(Config.ReverseCommandTopic,
+		communication.Publish(Config.ReverseCommandTopic,
 			Config.EngineName + "-reverse-command-publisher",
 			msg)
 	}
@@ -170,9 +172,9 @@ func handleCommand() {
 			fmt.Println("Closing channels...")
 			close(events.incoming)
 			close(commands.incoming)
-			disconnect(subscriber.event)
-			disconnect(subscriber.command)
-			disconnect(subscriber.reverseCommand)
+			communication.Disconnect(subscriber.event)
+			communication.Disconnect(subscriber.command)
+			communication.Disconnect(subscriber.reverseCommand)
 			fmt.Println("Channels closed. Shutting down now.")
 		default:
 			fmt.Println("Ignoring unknown command.")
@@ -188,7 +190,7 @@ func handlePublicationValue() {
 			fmt.Println("Ignoring event: EdgeX Event can't be marshalled.")
 		}
 		msg := string(payload)
-		publish(Config.OutputTopic, Config.EngineName + "-event-publisher", msg)
+		communication.Publish(Config.OutputTopic, Config.EngineName + "-event-publisher", msg)
 	}
 	fmt.Println("events.outgoing is closed.")
 }
