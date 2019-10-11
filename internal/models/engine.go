@@ -17,6 +17,15 @@ type Engine struct {
 	OffloadCondition string // offload function's signature and body
 }
 
+type Actuation struct {
+	DeviceName string
+	CommandName string
+	CommandBody string
+	LeftOperand string
+	Operator string
+	RightOperand string
+}
+
 // CLI publish to bitflow/engine/0/registry-request with text `0`
 // CLI subscribe to bitflow/engine/0/registry-response
 // if `failure` abort and report user engine already exists
