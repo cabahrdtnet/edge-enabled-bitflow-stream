@@ -15,9 +15,10 @@ import (
 	"fmt"
 	"github.com/datenente/device-bitflow/internal/communication"
 	"github.com/datenente/device-bitflow/internal/models"
+	"github.com/datenente/device-bitflow/internal/naming"
 	"github.com/edgexfoundry/device-sdk-go"
 	"os"
-	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -121,14 +122,54 @@ func (s *Driver) HandleReadCommands(deviceName string, protocols map[string]cont
 // command.
 func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]contract.ProtocolProperties, reqs []dsModels.CommandRequest,
 	params []*dsModels.CommandValue) error {
-	s.lc.Info(deviceName)
-	deviceResourceName := reqs[0].DeviceResourceName
+	index, err := naming.ExtractIndex(deviceName, "-", 1)
+	if err != nil {
+		err = fmt.Errorf("couldn't index from device name: %v", err)
+		return err
+	}
 
-	switch deviceResourceName {
+	defer func() {
+		driver.mutex.Lock()
+		defer driver.mutex.Unlock()
+
+		engine, exists := s.engines[naming.Name(index)]
+		format := ""
+		if exists {
+			format = fmt.Sprintf("%v", engine)
+		} else {
+			format = fmt.Sprintf("engine does not exist")
+		}
+		s.lc.Info(format)
+	}()
+
+	command := "nop"
+	if reqs[0].DeviceResourceName == "action" {
+		command = "control"
+	}
+
+	if reqs[0].DeviceResourceName == "contents" {
+		command = "script"
+	}
+
+	if reqs[0].DeviceResourceName == "devices" || reqs[0].DeviceResourceName == "value_descriptors" {
+		command = "source"
+	}
+
+	if reqs[0].DeviceResourceName == "actuation_device_name" || reqs[0].DeviceResourceName == "command_name" ||
+		reqs[0].DeviceResourceName == "command_body" || reqs[0].DeviceResourceName == "actuation_left_operand" ||
+		reqs[0].DeviceResourceName == "actuation_operator" || reqs[0].DeviceResourceName == "actuation_right_operand" {
+		command = "actuation"
+	}
+
+	if reqs[0].DeviceResourceName == "condition" {
+		command = "offloading"
+	}
+
+	switch command {
 	case "control":
 		action, err := params[0].StringValue()
 		if err != nil {
-			err = fmt.Errorf("couldn't determine action parameter of control command: %v", err)
+			err = fmt.Errorf("couldn't determine parameter action of %s command: %v", params[0].DeviceResourceName, err)
 			return err
 		}
 
@@ -141,46 +182,197 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 			s.lc.Info("Engine is stopping! So boring!")
 			return nil
 		}
+
+		return fmt.Errorf("couldn't determine action %s of %s command: %v", action, params[0].DeviceResourceName, err)
+
+	case "script":
+		contents, err := params[0].StringValue()
+		if err != nil {
+			err = fmt.Errorf("couldn't determine parameter contents of %s command: %v", params[0].DeviceResourceName, err)
+			return err
+		}
+
+		template := models.Engine{
+			Script: contents,
+		}
+
+		err = update(index, template)
+		if err != nil {
+			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
+			return err
+		}
+
+		return nil
+
 	case "source":
-		// ["devices","value_descriptors"]
+		type resource struct {
+			name string
+			value string
+		}
+
+		resources := [2]resource{}
+		for i := 0; i < 2; i++ {
+			if reqs[i].DeviceResourceName == "devices" {
+				devices, err := params[i].StringValue()
+				if err != nil {
+					err = fmt.Errorf("couldn't determine parameter devices of %s command: %v", params[i].DeviceResourceName, err)
+					return err
+				}
+				resources[0].name = reqs[i].DeviceResourceName
+				resources[0].value = devices
+			}
+
+			if reqs[i].DeviceResourceName == "value_descriptors" {
+				valueDescriptors, err := params[i].StringValue()
+				if err != nil {
+					err = fmt.Errorf("couldn't determine parameter value_descriptors of %s command: %v", params[i].DeviceResourceName, err)
+					return err
+				}
+				resources[1].name = reqs[i].DeviceResourceName
+				resources[1].value = valueDescriptors
+			}
+		}
+
+		devices := resources[0].value
+		valueDescriptors := resources[1].value
+
+		inputDeviceNames := strings.Split(strings.TrimSpace(devices), ",")
+		inputValueDescriptorNames := strings.Split(strings.TrimSpace(valueDescriptors), ",")
+
+		template := models.Engine{
+			InputDeviceNames:          inputDeviceNames,
+			InputValueDescriptorNames: inputValueDescriptorNames,
+		}
+
+		err = update(index, template)
+		if err != nil {
+			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
+			return err
+		}
+
+		return nil
+
 	case "actuation":
-		// ["command_name", "body", "actuation_device", "actuation_left_operand", "actuation_operator", "actuation_right_operand"]
+		type resource struct {
+			name string
+			value string
+		}
+
+		resources := [6]resource{}
+		for i := 0; i < 6; i++ {
+			if reqs[i].DeviceResourceName == "actuation_device_name" {
+				actuationDeviceName, err := params[i].StringValue()
+				if err != nil {
+					err = fmt.Errorf("couldn't determine parameter actuation_device_name of %s command: %v", params[i].DeviceResourceName, err)
+					return err
+				}
+				resources[0].name = reqs[i].DeviceResourceName
+				resources[0].value = actuationDeviceName
+			}
+
+			if reqs[i].DeviceResourceName == "command_name" {
+				commandName, err := params[i].StringValue()
+				if err != nil {
+					err = fmt.Errorf("couldn't determine parameter command_name of %s command: %v", params[i].DeviceResourceName, err)
+					return err
+				}
+				resources[1].name = reqs[i].DeviceResourceName
+				resources[1].value = commandName
+			}
+
+			if reqs[i].DeviceResourceName == "command_body" {
+				commandBody, err := params[i].StringValue()
+				if err != nil {
+					err = fmt.Errorf("couldn't determine parameter command_body of %s command: %v", params[i].DeviceResourceName, err)
+					return err
+				}
+				resources[2].name = reqs[i].DeviceResourceName
+				resources[2].value = commandBody
+			}
+
+			if reqs[i].DeviceResourceName == "actuation_left_operand" {
+				leftOperand, err := params[i].StringValue()
+				if err != nil {
+					err = fmt.Errorf("couldn't determine parameter actuation_left_operand %s command: %v", params[i].DeviceResourceName, err)
+					return err
+				}
+				resources[3].name = reqs[i].DeviceResourceName
+				resources[3].value = leftOperand
+			}
+
+			if reqs[i].DeviceResourceName == "actuation_operator" {
+				operator, err := params[i].StringValue()
+				if err != nil {
+					err = fmt.Errorf("couldn't determine parameter actuation_operator %s command: %v", params[i].DeviceResourceName, err)
+					return err
+				}
+				resources[4].name = reqs[i].DeviceResourceName
+				resources[4].value = operator
+			}
+
+			if reqs[i].DeviceResourceName == "actuation_right_operand" {
+				rightOperand, err := params[i].StringValue()
+				if err != nil {
+					err = fmt.Errorf("couldn't determine parameter actuation_right_operand %s command: %v", params[i].DeviceResourceName, err)
+					return err
+				}
+				resources[5].name = reqs[i].DeviceResourceName
+				resources[5].value = rightOperand
+			}
+		}
+
+		actuationDeviceName := resources[0].value
+		commandName         := resources[1].value
+		commandBody         := resources[2].value
+		leftOperand         := resources[3].value
+		operator            := resources[4].value
+		rightOperand        := resources[5].value
+
+		actuation := models.Actuation{
+			DeviceName:   actuationDeviceName,
+			CommandName:  commandName,
+			CommandBody:  commandBody,
+			LeftOperand:  leftOperand,
+			Operator:     operator,
+			RightOperand: rightOperand,
+		}
+
+		template := models.Engine{
+			Actuation: actuation,
+		}
+
+		err = update(index, template)
+		if err != nil {
+			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
+			return err
+		}
+
+		return nil
+
 	case "offloading":
-		// condition
+		offloadCondition, err := params[0].StringValue()
+		if err != nil {
+			err = fmt.Errorf("couldn't determine parameter condition of %s command: %v", params[0].DeviceResourceName, err)
+			return err
+		}
+
+		template := models.Engine{
+			OffloadCondition: offloadCondition,
+		}
+
+		err = update(index, template)
+		if err != nil {
+			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
+			return err
+		}
+
+		return nil
+
+	case "nop":
+		return fmt.Errorf("couldn't recognize any device command other than \"nop\"")
 	}
 
-	cmdMessage := "Got command: " + deviceResourceName + " with params: "
-	s.lc.Info(cmdMessage)
-	for index, param := range params {
-		paramMessage := "{"
-		paramMessage += "Param No. " + strconv.Itoa(index) + ":"
-		paramMessage += param.DeviceResourceName + ":"
-		paramMessage += "::"
-		stringValue, _ := param.StringValue()
-		paramMessage += stringValue
-		paramMessage += "}"
-		s.lc.Info(paramMessage)
-	}
-
-	return nil
-
-	//if len(reqs) != 1 {
-	//	err := fmt.Errorf("Driver.HandleWriteCommands; too many command requests; only one supported")
-	//	return err
-	//}
-	//if len(params) != 1 {
-	//	err := fmt.Errorf("Driver.HandleWriteCommands; the number of parameter is not correct; only one supported")
-	//	return err
-	//}
-	//
-	//s.lc.Debug(fmt.Sprintf("Driver.HandleWriteCommands: protocols: %v, resource: %v, parameters: %v", protocols, reqs[0].DeviceResourceName, params))
-	//var err error
-	//if s.switchButton, err = params[0].BoolValue(); err != nil {
-	//	err := fmt.Errorf("Driver.HandleWriteCommands; the data type of parameter should be Boolean, parameter: %s", params[0].String())
-	//	return err
-	//}
-	//
-	//return nil
+	return fmt.Errorf("couldn't recognize any device command")
 }
 
 // Stop the protocol-specific DS code to shutdown gracefully, or

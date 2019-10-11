@@ -2,7 +2,7 @@ package models
 
 var (
 	DefaultScript = `input -> output`
-	DefaultInputDeviceNames = []string{"device_profile:device_random"}
+	DefaultInputDeviceNames = []string{}
 	DefaultInputValueDescriptorNames = []string{}
 	DefaultActuation = Actuation{}
 	DefaultOffloadCondition = `func offload() string { return "local" })`

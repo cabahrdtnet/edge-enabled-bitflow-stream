@@ -43,7 +43,7 @@ deviceResources:
         { type: "String", readWrite: "R", defaultValue: "" }
 
   -
-    name: "actuation_device"
+    name: "actuation_device_name"
     description: "name of another device that is acted upon"
     properties:
       value:
@@ -125,9 +125,9 @@ deviceCommands:
   -
     name: "actuation"
     set:
-      - { index: "1", operation: "set", object: "command_name", parameter: "command_name" }
-      - { index: "2", operation: "set", object: "command_body", parameter: "command_body" }
-      - { index: "3", operation: "set", object: "actuation_device", parameter: "actuation_device" }
+      - { index: "1", operation: "set", object: "actuation_device_name", parameter: "actuation_device_name" }
+      - { index: "2", operation: "set", object: "command_name", parameter: "command_name" }
+      - { index: "3", operation: "set", object: "command_body", parameter: "command_body" }
       - { index: "4", operation: "set", object: "actuation_left_operand", parameter: "actuation_left_operand" }
       - { index: "5", operation: "set", object: "actuation_operator", parameter: "actuation_operator" }
       - { index: "6", operation: "set", object: "actuation_right_operand", parameter: "actuation_right_operand" }
@@ -188,7 +188,7 @@ coreCommands:
     name: "actuation"
     put:
       path: "/api/v1/device/{deviceId}/actuation"
-      parameterNames: ["command_name", "body", "actuation_device", "actuation_left_operand", "actuation_operator", "actuation_right_operand"]
+      parameterNames: ["actuation_device_name", "command_name", "command_body", "actuation_left_operand", "actuation_operator", "actuation_right_operand"]
       responses:
         -
           code: "204"

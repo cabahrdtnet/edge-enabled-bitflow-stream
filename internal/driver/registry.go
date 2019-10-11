@@ -23,31 +23,28 @@ func initEngineRegistry() error {
 	return nil
 }
 
+// set engine identified by index with template
 func update(index int64, template models.Engine) error {
 	driver.mutex.Lock()
 	defer driver.mutex.Unlock()
 	name := naming.Name(index)
 	engine, exists := driver.engines[name]
 	if exists {
-		if engine.Name == "" {
-			engine.Name = template.Name
-		}
-
-		if engine.Script == "" {
+		if template.Script != "" {
 			engine.Script = template.Script
 		}
 
-		if len(engine.InputDeviceNames) == 0 {
+		if len(template.InputDeviceNames) != 0 {
 			engine.InputDeviceNames =
 				append(template.InputDeviceNames[:0:0], template.InputDeviceNames...)
 		}
 
-		if len(engine.InputValueDescriptorNames) == 0 {
+		if len(template.InputValueDescriptorNames) != 0 {
 			engine.InputValueDescriptorNames =
 				append(template.InputValueDescriptorNames[:0:0], template.InputValueDescriptorNames...)
 		}
 
-		if engine.Actuation.DeviceName == "" {
+		if template.Actuation.DeviceName != "" {
 			engine.Actuation.DeviceName = template.Actuation.DeviceName
 			engine.Actuation.CommandName = template.Actuation.CommandName
 			engine.Actuation.CommandBody = template.Actuation.CommandBody
@@ -56,11 +53,13 @@ func update(index int64, template models.Engine) error {
 			engine.Actuation.RightOperand = template.Actuation.RightOperand
 		}
 
-		if engine.OffloadCondition == "" {
+		if template.OffloadCondition != "" {
 			engine.OffloadCondition = template.OffloadCondition
 		}
 
 		driver.lc.Debug("updated engine " + naming.Name(index) + " in engine registry")
+
+		driver.engines[name] = engine
 		return nil
 	} else {
 		return fmt.Errorf("can't change engine with name %s, because it does not exist in engine registry", name)
