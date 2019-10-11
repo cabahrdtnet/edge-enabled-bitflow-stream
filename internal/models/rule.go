@@ -57,7 +57,7 @@ type Action struct {
 }
 
 // create rule from actuation and device index string to differentiate between identical rules between engines
-func ApplyRuleFrom(actuation Actuation, index int64) error {
+func From(actuation Actuation, index int64) (Rule, error) {
 	name := naming.Name(index)
 
 	parameter := Parameter{
@@ -68,14 +68,14 @@ func ApplyRuleFrom(actuation Actuation, index int64) error {
 	}
 
 	log := name
-	deviceID, err := IDOfDevice(name)
+	deviceID, err := idOfDevice(name)
 	if err != nil {
-		return fmt.Errorf("couldn't get ID of device with index %d, because of: %v", index, err)
+		return Rule{}, fmt.Errorf("couldn't get ID of device with index %d, because of: %v", index, err)
 	}
 
-	commandID, err := IDOfCommand(name)
+	commandID, err := idOfCommand(name)
 	if err != nil {
-		return fmt.Errorf("couldn't get ID of command with index %d, because of: %v", index, err)
+		return Rule{}, fmt.Errorf("couldn't get ID of command with index %d, because of: %v", index, err)
 	}
 
 	rule := Rule{
@@ -93,14 +93,31 @@ func ApplyRuleFrom(actuation Actuation, index int64) error {
 		Log:       log,
 	}
 
-	_, err = clients.PostJsonRequest(drv.URL.RulesEngine, rule, context.TODO())
+	return rule, nil
+}
+
+// add rule to rules engine
+func (r *Rule) Add() error {
+	url := drv.URL.RulesEngine + clients.ApiBase + "/rule"
+	_, err := clients.PostJsonRequest(url, r, context.TODO())
 	if err != nil {
 		return fmt.Errorf("couldn't send rule to rules engine: %v", err)
 	}
 	return nil
 }
 
-func IDOfDevice(name string) (string, error) {
+// remove rule from rules engine
+func (r *Rule) Remove() error {
+	url := drv.URL.RulesEngine + clients.ApiBase + "/rule/name/" + r.Name
+	err := clients.DeleteRequest(url, context.TODO())
+	if err != nil {
+		return fmt.Errorf("couldn't send rule to rules engine: %v", err)
+	}
+	return nil
+}
+
+// get ID of device for action in rule
+func idOfDevice(name string) (string, error) {
 	payload, err := clients.GetRequest(drv.URL.CoreMetadata, context.TODO())
 	ID := string(payload)
 	if err != nil {
@@ -110,7 +127,8 @@ func IDOfDevice(name string) (string, error) {
 	}
 }
 
-func IDOfCommand(name string) (string, error) {
+// get ID of command for action in rule
+func idOfCommand(name string) (string, error) {
 	payload, err := clients.GetRequest(drv.URL.CoreCommand, context.TODO())
 	ID := string(payload)
 	if err != nil {
