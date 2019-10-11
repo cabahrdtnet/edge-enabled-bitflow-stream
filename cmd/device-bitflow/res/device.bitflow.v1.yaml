@@ -7,8 +7,8 @@ description: "Device that executes bitflow scripts."
 
 deviceResources:
   -
-    name: "control"
-    description: "lets user start and stop a script execution engine"
+    name: "action"
+    description: "manually start and stop a script execution engine"
     properties:
       value:
         { type: "String", readWrite: "R", defaultValue: ""}
@@ -20,7 +20,7 @@ deviceResources:
     description: "file contents of script which will be executed on the device"
     properties:
       value:
-        { type: "String", readWrite: "W", defaultValue: "input -> output"}
+        { type: "String", readWrite: "W", defaultValue: ""}
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
@@ -83,7 +83,7 @@ deviceResources:
     description: "dyadic actuation operator describes condition when to act on actuation_device, i.e. call above command"
     properties:
       value:
-        { type: "String", readWrite: "W", defaultValue: "!=" }
+        { type: "String", readWrite: "W", defaultValue: "" }
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
@@ -101,7 +101,7 @@ deviceResources:
     description: "go function with signature: func offload() string, returning local or remote "
     properties:
       value:
-        { type: "String", readWrite: "W", defaultValue: "func offload() string { return \"local\" }" }
+        { type: "String", readWrite: "W", defaultValue: ""}
       units:
         { type: "String", readWrite: "R", defaultValue: "" }
 
@@ -109,7 +109,7 @@ deviceCommands:
   -
     name: "control"
     set:
-      - { operation: "set", object: "control", parameter: "control" }
+      - { operation: "set", object: "action", parameter: "action" }
 
   -
     name: "script"
@@ -143,11 +143,11 @@ coreCommands:
     name: "control"
     put:
       path: "/api/v1/device/{deviceId}/control"
-      parameterNames: ["control"]
+      parameterNames: ["action"]
       responses:
         -
           code: "204"
-          description: "control bitflow script execution engine by setting next desired status"
+          description: "start or stop bitflow script execution engine"
           expectedValues: []
         -
           code: "500"
