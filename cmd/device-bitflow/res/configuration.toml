@@ -58,15 +58,15 @@ EnableRemote = false
 File = "./device-bitflow.log"
 
 # Pre-define Devices
-[[DeviceList]]
-  Name = "Bitflow-Script-Test-Device"
-  Profile = "Bitflow-Script-Execution-Device"
-  Description = "A full-manual bitflow script test device."
-  Labels = [ "industrial" ]
-  [DeviceList.Protocols]
-    [DeviceList.Protocols.other]
-      Address = "bitflow_script_test_device"
-      Port = "300"
+#[[DeviceList]]
+#  Name = "Bitflow-Script-Test-Device"
+#  Profile = "Bitflow-Script-Execution-Engine"
+#  Description = "A full-manual bitflow script test device."
+#  Labels = [ "industrial" ]
+#  [DeviceList.Protocols]
+#    [DeviceList.Protocols.other]
+#      Address = "bitflow_script_test_device"
+#      Port = "300"
 #  [[DeviceList.AutoEvents]]
 #    Frequency = "10s"
 #    OnChange = false
@@ -75,3 +75,13 @@ File = "./device-bitflow.log"
 #    Frequency = "30s"
 #    OnChange = false
 #    Resource = "Image"
+[Driver]
+BrokerSchema = "tcp"
+BrokerHost = "192.168.178.20"
+BrokerPort = "1883"
+CoreDataSchema = "http"
+CoreDataHost = "192.168.178.20"
+CoreDataPort = "48080"
+ExportClientDataSchema = "http"
+ExportClientHost = "192.168.178.20"
+ExportClientPort = "48071"

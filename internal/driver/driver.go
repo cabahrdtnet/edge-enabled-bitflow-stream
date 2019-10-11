@@ -13,11 +13,12 @@ package driver
 import (
 	"bytes"
 	"fmt"
-	"image"
-	"image/jpeg"
-	"image/png"
+	"github.com/datenente/device-bitflow/internal/communication"
+	"github.com/datenente/device-bitflow/internal/models"
+	"github.com/edgexfoundry/device-sdk-go"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	dsModels "github.com/edgexfoundry/device-sdk-go/pkg/models"
@@ -25,42 +26,17 @@ import (
 	contract "github.com/edgexfoundry/go-mod-core-contracts/models"
 )
 
+var (
+	driver *Driver
+)
+
 type Driver struct {
 	lc           logger.LoggingClient
 	asyncCh      chan<- *dsModels.AsyncValues
-	switchButton bool
-}
-
-func getImageBytes(imgFile string, buf *bytes.Buffer) error {
-	// Read existing image from file
-	img, err := os.Open(imgFile)
-	if err != nil {
-		return err
-	}
-	defer img.Close()
-
-	// TODO: Attach MediaType property, determine if decoding
-	//  early is required (to optimize edge processing)
-
-	// Expect "png" or "jpeg" image type
-	imageData, imageType, err := image.Decode(img)
-	if err != nil {
-		return err
-	}
-	// Finished with file. Reset file pointer
-	img.Seek(0, 0)
-	if imageType == "jpeg" {
-		err = jpeg.Encode(buf, imageData, nil)
-		if err != nil {
-			return err
-		}
-	} else if imageType == "png" {
-		err = png.Encode(buf, imageData)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	engines      map[string]models.Engine
+	config       *configuration
+	mutex        sync.Mutex
+	// see [@GopherCon2017Lightning]
 }
 
 // Initialize performs protocol-specific initialization for the device
@@ -68,6 +44,27 @@ func getImageBytes(imgFile string, buf *bytes.Buffer) error {
 func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.AsyncValues) error {
 	s.lc = lc
 	s.asyncCh = asyncCh
+	s.engines = make(map[string]models.Engine)
+	driver = s
+
+	err := initEngineRegistry()
+	if err != nil {
+		panic(fmt.Errorf("could not init registry: %v", err))
+	}
+
+	config, err := CreateDriverConfig(device.DriverConfigs())
+	if err != nil {
+		panic(fmt.Errorf("could not read driver configuration: %v", err))
+	}
+	s.config = config
+
+	urls.CoreData = s.config.CoreDataSchema + "://" + s.config.CoreDataHost + ":" + s.config.CoreDataPort
+	urls.ExportClient = s.config.ExportClientDataSchema + "://" + s.config.ExportClientHost + ":" + s.config.ExportClientPort
+	communication.Broker = s.config.BrokerSchema + "://" + s.config.BrokerHost + ":" + s.config.BrokerPort
+
+	go InitRegistrySubscription()
+	go handleRegistryRequest()
+
 	return nil
 }
 
@@ -85,15 +82,17 @@ func (s *Driver) HandleReadCommands(deviceName string, protocols map[string]cont
 	res = make([]*dsModels.CommandValue, 1)
 	now := time.Now().UnixNano() / int64(time.Millisecond)
 	if reqs[0].DeviceResourceName == "SwitchButton" {
-		cv, _ := dsModels.NewBoolValue(reqs[0].DeviceResourceName, now, s.switchButton)
+		// true was s.SwitchButton
+		cv, _ := dsModels.NewBoolValue(reqs[0].DeviceResourceName, now, true)
 		res[0] = cv
 	} else if reqs[0].DeviceResourceName == "Image" {
 		// Show a binary/image representation of the switch's on/off value
 		buf := new(bytes.Buffer)
-		if s.switchButton == true {
-			err = getImageBytes("./res/on.png", buf)
+		//s.switchButton instead of first true
+		if true == true {
+			//err = getImageBytes("./res/on.png", buf)
 		} else {
-			err = getImageBytes("./res/off.jpg", buf)
+			//err = getImageBytes("./res/off.jpg", buf)
 		}
 		cvb, _ := dsModels.NewBinaryValue(reqs[0].DeviceResourceName, now, buf.Bytes())
 		res[0] = cvb
@@ -122,8 +121,35 @@ func (s *Driver) HandleReadCommands(deviceName string, protocols map[string]cont
 // command.
 func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]contract.ProtocolProperties, reqs []dsModels.CommandRequest,
 	params []*dsModels.CommandValue) error {
-	drName := reqs[0].DeviceResourceName
-	cmdMessage := "Got command: " + drName + " with params: "
+	s.lc.Info(deviceName)
+	deviceResourceName := reqs[0].DeviceResourceName
+
+	switch deviceResourceName {
+	case "control":
+		action, err := params[0].StringValue()
+		if err != nil {
+			err = fmt.Errorf("couldn't determine action parameter of control command: %v", err)
+			return err
+		}
+
+		if action == "start" {
+			s.lc.Info("Engine is starting! So exciting!")
+			return nil
+		}
+
+		if action == "stop" {
+			s.lc.Info("Engine is stopping! So boring!")
+			return nil
+		}
+	case "source":
+		// ["devices","value_descriptors"]
+	case "actuation":
+		// ["command_name", "body", "actuation_device", "actuation_left_operand", "actuation_operator", "actuation_right_operand"]
+	case "offloading":
+		// condition
+	}
+
+	cmdMessage := "Got command: " + deviceResourceName + " with params: "
 	s.lc.Info(cmdMessage)
 	for index, param := range params {
 		paramMessage := "{"
