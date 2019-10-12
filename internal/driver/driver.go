@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/datenente/device-bitflow/internal/communication"
+	conf "github.com/datenente/device-bitflow/internal/config"
 	"github.com/datenente/device-bitflow/internal/models"
 	"github.com/datenente/device-bitflow/internal/naming"
 	"github.com/edgexfoundry/device-sdk-go"
@@ -28,15 +29,15 @@ import (
 )
 
 var (
-	driver *Driver
+	BitflowDriver *Driver
 )
 
 type Driver struct {
-	lc           logger.LoggingClient
-	asyncCh      chan<- *dsModels.AsyncValues
-	engines      map[string]models.Engine
-	config       *configuration
-	mutex        sync.Mutex
+	lc      logger.LoggingClient
+	asyncCh chan<- *dsModels.AsyncValues
+	engines map[string]models.Engine
+	config  *conf.Configuration
+	mutex   sync.RWMutex
 	// see [@GopherCon2017Lightning]
 }
 
@@ -46,21 +47,24 @@ func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.As
 	s.lc = lc
 	s.asyncCh = asyncCh
 	s.engines = make(map[string]models.Engine)
-	driver = s
+	BitflowDriver = s
 
 	err := initEngineRegistry()
 	if err != nil {
 		panic(fmt.Errorf("could not init registry: %v", err))
 	}
 
-	config, err := CreateDriverConfig(device.DriverConfigs())
+	config, err := conf.CreateDriverConfig(device.DriverConfigs())
 	if err != nil {
 		panic(fmt.Errorf("could not read driver configuration: %v", err))
 	}
 	s.config = config
 
-	urls.CoreData = s.config.CoreDataSchema + "://" + s.config.CoreDataHost + ":" + s.config.CoreDataPort
-	urls.ExportClient = s.config.ExportClientDataSchema + "://" + s.config.ExportClientHost + ":" + s.config.ExportClientPort
+	conf.URL.CoreData = s.config.CoreDataSchema + "://" + s.config.CoreDataHost + ":" + s.config.CoreDataPort
+	conf.URL.CoreMetadata = s.config.CoreMetadataSchema + "://" + s.config.CoreMetadataHost + ":" + s.config.CoreMetadataPort
+	conf.URL.CoreCommand = s.config.CoreCommandSchema + "://" + s.config.CoreCommandHost + ":" + s.config.CoreCommandPort
+	conf.URL.ExportClient = s.config.ExportClientSchema + "://" + s.config.ExportClientHost + ":" + s.config.ExportClientPort
+	conf.URL.RulesEngine = s.config.RulesEngineSchema + "://" + s.config.RulesEngineHost + ":" + s.config.RulesEnginePort
 	communication.Broker = s.config.BrokerSchema + "://" + s.config.BrokerHost + ":" + s.config.BrokerPort
 
 	go InitRegistrySubscription()
@@ -129,8 +133,8 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 	}
 
 	defer func() {
-		driver.mutex.Lock()
-		defer driver.mutex.Unlock()
+		BitflowDriver.mutex.RLock()
+		BitflowDriver.mutex.RUnlock()
 
 		engine, exists := s.engines[naming.Name(index)]
 		format := ""
@@ -174,7 +178,7 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		}
 
 		if action == "start" {
-			s.lc.Info("Engine is starting! So exciting!")
+			go startEngine(deviceName)
 			return nil
 		}
 

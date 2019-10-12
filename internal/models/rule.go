@@ -3,34 +3,10 @@ package models
 import (
 	"context"
 	"fmt"
-	drv "github.com/datenente/device-bitflow/internal/driver"
+	"github.com/datenente/device-bitflow/internal/config"
 	"github.com/datenente/device-bitflow/internal/naming"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients"
 )
-
-//{
-//	"name": "randnum_too_huge",
-//
-//	"condition": {
-//	"device": "MQ_DEVICE",
-//		"checks": [
-//			{
-//				"parameter": "randnum",
-//				"operand1": "Float.parseFloat(value)",
-//				"operation": ">",
-//				"operand2": "27.0"
-//			}
-//		]
-//	},
-//
-//	"action": {
-//		"device": "6d2a216d-60b3-42fc-9f3a-37cc7daaab3f",
-//		"command": "8e8c92ea-229a-4746-acfd-8a1ebb580cb9",
-//		"body": "{\\\"message\\\":\\\"WARNING temp too high!\\\"}"
-//	},
-//
-//	"log": "This random number is definitely too friggin huge."
-//}
 
 type Rule struct {
 	Name string         `json:"name"`
@@ -98,7 +74,7 @@ func From(actuation Actuation, index int64) (Rule, error) {
 
 // add rule to rules engine
 func (r *Rule) Add() error {
-	url := drv.URL.RulesEngine + clients.ApiBase + "/rule"
+	url := config.URL.RulesEngine + clients.ApiBase + "/rule"
 	_, err := clients.PostJsonRequest(url, r, context.TODO())
 	if err != nil {
 		return fmt.Errorf("couldn't send rule to rules engine: %v", err)
@@ -108,7 +84,7 @@ func (r *Rule) Add() error {
 
 // remove rule from rules engine
 func (r *Rule) Remove() error {
-	url := drv.URL.RulesEngine + clients.ApiBase + "/rule/name/" + r.Name
+	url := config.URL.RulesEngine + clients.ApiBase + "/rule/name/" + r.Name
 	err := clients.DeleteRequest(url, context.TODO())
 	if err != nil {
 		return fmt.Errorf("couldn't send rule to rules engine: %v", err)
@@ -118,22 +94,24 @@ func (r *Rule) Remove() error {
 
 // get ID of device for action in rule
 func idOfDevice(name string) (string, error) {
-	payload, err := clients.GetRequest(drv.URL.CoreMetadata, context.TODO())
+	url := config.URL.CoreMetadata + clients.ApiDeviceRoute + "/name/" + name
+	payload, err := clients.GetRequest(url, context.TODO())
 	ID := string(payload)
 	if err != nil {
 		return ID, nil
 	} else {
-		return "", fmt.Errorf("couldn't derive ID for device %s, because of: %v", err)
+		return "", fmt.Errorf("couldn't derive ID for device %s, because of: %v", name, err)
 	}
 }
 
 // get ID of command for action in rule
 func idOfCommand(name string) (string, error) {
-	payload, err := clients.GetRequest(drv.URL.CoreCommand, context.TODO())
+	url := config.URL.CoreCommand + clients.ApiDeviceRoute + "/name/" + name
+	payload, err := clients.GetRequest(url, context.TODO())
 	ID := string(payload)
 	if err != nil {
 		return ID, nil
 	} else {
-		return "", fmt.Errorf("couldn't derive ID for command %s, because of: %v", err)
+		return "", fmt.Errorf("couldn't derive ID for command %s, because of: %v", name, err)
 	}
 }

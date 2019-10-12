@@ -7,7 +7,7 @@
 // CHANGED BY CHRISTIAN ALEXANDER BAHRDT
 // This file is derivative of
 // https://github.com/edgexfoundry/device-mqtt-go/blob/edinburgh/internal/driver/config.go
-package driver
+package config
 
 import (
 	"fmt"
@@ -17,10 +17,17 @@ import (
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
 )
 
+const (
+	Protocol = "mqtt"
+)
+
 var (
-	urls = struct {
+	URL = struct {
 		CoreData string
+		CoreMetadata string
+		CoreCommand string
 		ExportClient string
+		RulesEngine string
 	}{}
 )
 
@@ -34,21 +41,30 @@ type ConnectionInfo struct {
 	Topic    string
 }
 
-type configuration struct {
+type Configuration struct {
 	BrokerSchema    string
 	BrokerHost      string
 	BrokerPort      string
 	CoreDataSchema  string
 	CoreDataHost    string
 	CoreDataPort    string
-	ExportClientDataSchema string
+	CoreMetadataSchema  string
+	CoreMetadataHost    string
+	CoreMetadataPort    string
+	CoreCommandSchema string
+	CoreCommandHost string
+	CoreCommandPort string
+	ExportClientSchema string
 	ExportClientHost string
 	ExportClientPort string
+	RulesEngineSchema string
+	RulesEngineHost string
+	RulesEnginePort string
 }
 
 // CreateDriverConfig use to load driver config for incoming listener and response listener
-func CreateDriverConfig(configMap map[string]string) (*configuration, error) {
-	config := new(configuration)
+func CreateDriverConfig(configMap map[string]string) (*Configuration, error) {
+	config := new(Configuration)
 	err := load(configMap, config)
 	if err != nil {
 		return config, err

@@ -25,10 +25,10 @@ func initEngineRegistry() error {
 
 // set engine identified by index with template
 func update(index int64, template models.Engine) error {
-	driver.mutex.Lock()
-	defer driver.mutex.Unlock()
+	BitflowDriver.mutex.Lock()
+	defer BitflowDriver.mutex.Unlock()
 	name := naming.Name(index)
-	engine, exists := driver.engines[name]
+	engine, exists := BitflowDriver.engines[name]
 	if exists {
 		if template.Script != "" {
 			engine.Script = template.Script
@@ -57,16 +57,16 @@ func update(index int64, template models.Engine) error {
 			engine.OffloadCondition = template.OffloadCondition
 		}
 
-		driver.lc.Debug("updated engine " + naming.Name(index) + " in engine registry")
+		BitflowDriver.lc.Debug("updated engine " + naming.Name(index) + " in engine registry")
 
-		driver.engines[name] = engine
+		BitflowDriver.engines[name] = engine
 		return nil
 	} else {
 		return fmt.Errorf("can't change engine with name %s, because it does not exist in engine registry", name)
 	}
 }
 
-// add engine to engine registry in driver and add associated device to EdgeX
+// add engine to engine registry in BitflowDriver and add associated device to EdgeX
 func register(index int64) error {
 	err := addEngine(index)
 	if err != nil {
@@ -81,7 +81,7 @@ func register(index int64) error {
 	return nil
 }
 
-// remove engine from engine registry in driver and remove device from EdgeX
+// remove engine from engine registry in BitflowDriver and remove device from EdgeX
 func deregister(index int64) error {
 	err := deleteEngine(index)
 	if err != nil {
@@ -97,15 +97,15 @@ func deregister(index int64) error {
 }
 
 // TODO write unit test for this
-// add engine to engine registry in driver
+// add engine to engine registry in BitflowDriver
 func addEngine(index int64) error {
-	driver.mutex.Lock()
-	defer driver.mutex.Unlock()
+	BitflowDriver.mutex.Lock()
+	defer BitflowDriver.mutex.Unlock()
 
 	name := naming.Name(index)
-	_, exists := driver.engines[name]
+	_, exists := BitflowDriver.engines[name]
 	if ! exists {
-		driver.engines[name] = models.Engine{
+		BitflowDriver.engines[name] = models.Engine{
 			Name:                      name,
 			Script:                    models.DefaultScript,
 			InputDeviceNames:          models.DefaultInputDeviceNames,
@@ -113,24 +113,24 @@ func addEngine(index int64) error {
 			Actuation:                 models.Actuation{},
 			OffloadCondition:          models.DefaultOffloadCondition,
 		}
-		driver.lc.Debug("added engine " + naming.Name(index) + " to engine registry")
+		BitflowDriver.lc.Debug("added engine " + naming.Name(index) + " to engine registry")
 		return nil
 	} else {
 		return fmt.Errorf("can't add engine with name %s, because it already exists in engine registry", name)
 	}
 }
 
-// delete engine from engine registry in driver
+// delete engine from engine registry in BitflowDriver
 func deleteEngine(index int64) error {
-	driver.mutex.Lock()
-	defer driver.mutex.Unlock()
+	BitflowDriver.mutex.Lock()
+	defer BitflowDriver.mutex.Unlock()
 
 	name := naming.Name(index)
-	_, exists := driver.engines[name]
+	_, exists := BitflowDriver.engines[name]
 
 	if exists {
-		delete(driver.engines, name)
-		driver.lc.Debug("deleted engine " + name + " from engine registry")
+		delete(BitflowDriver.engines, name)
+		BitflowDriver.lc.Debug("deleted engine " + name + " from engine registry")
 		return nil
 	} else {
 		return fmt.Errorf("can't delete engine with name %s, because it does not exist in engine registry", name)
@@ -142,12 +142,12 @@ func addDevice(index int64) error {
 	name := naming.Name(index)
 	props := contract.ProtocolProperties{
 		"ClientId" : naming.Publisher(index, naming.Command),
-		"Host" : driver.config.BrokerHost,
+		"Host" :     BitflowDriver.config.BrokerHost,
 		"Password" : "",
-		"Port" : driver.config.BrokerPort,
-		"Schema" : driver.config.BrokerSchema,
-		"Topic" : naming.Topic(index, naming.Command),
-		"User" : "",
+		"Port" :     BitflowDriver.config.BrokerPort,
+		"Schema" :   BitflowDriver.config.BrokerSchema,
+		"Topic" :    naming.Topic(index, naming.Command),
+		"User" :     "",
 	}
 
 	//url := fmt.Sprintf("http://%s:%d%s",
@@ -192,7 +192,7 @@ func addDevice(index int64) error {
 	_, err := sdk.RunningService().AddDevice(dev)
 	//_, err := clients.PostJsonRequest(url, device, context.TODO())
 	if err == nil {
-		driver.lc.Debug("added device " + naming.Name(index) + " to EdgeX")
+		BitflowDriver.lc.Debug("added device " + naming.Name(index) + " to EdgeX")
 		return err
 	} else {
 		return fmt.Errorf("couldn't add device to EdgeX: %v", err)
@@ -204,7 +204,7 @@ func removeDevice(index int64) error {
 	name := naming.Name(index)
 	err := sdk.RunningService().RemoveDeviceByName(name)
 	if err == nil {
-		driver.lc.Debug("removed device " + naming.Name(index) + " from EdgeX")
+		BitflowDriver.lc.Debug("removed device " + naming.Name(index) + " from EdgeX")
 		return nil
 	} else {
 		return fmt.Errorf("couldn't remove device from EdgeX: %v", err)

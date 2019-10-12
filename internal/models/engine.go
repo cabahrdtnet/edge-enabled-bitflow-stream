@@ -26,6 +26,10 @@ type Actuation struct {
 	RightOperand string
 }
 
+func rule(actuation Actuation) {
+
+}
+
 // CLI publish to bitflow/engine/0/registry-request with text `0`
 // CLI subscribe to bitflow/engine/0/registry-response
 // if `failure` abort and report user engine already exists
@@ -59,7 +63,7 @@ type Actuation struct {
 // on call of DS command (control=start)
 // if source is []
 // - return error, and let CLI notify user why this happened
-// save export client name (derive export client -> body
+// save export client name (derive export client -> body)
 // - create export client: POST to http://edgex-export-client:48071/api/v1/registration
 // if actuation is set (derive rule -> body)
 // - create rule: POST to http://edgex-support-rulesengine:48075/api/v1/rule
@@ -89,4 +93,4 @@ type Actuation struct {
 // close registry channel
 // unsubscribe from "bitflow/engine/0/registry-response"
 
-// remove device metadata only if device is started and stopped by device CLI
+// search through todos, especially cleanup

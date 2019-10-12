@@ -12,9 +12,13 @@ const (
 	DefaultEngineName = "engine"
 
 	Bitflow          = "bitflow"
-	Command          = "Command"
+	Command          = "command"
+	Source           = "source"
+	Sink             = "sink"
 	RegistryRequest  = "registry-request"
 	RegistryResponse = "registry-response"
+	ReverseCommand   = "reverse-command"
+	ReverseCommandResponse = "reverse-command-response"
 )
 
 // TODO unit test for this shit
@@ -32,6 +36,21 @@ func Topic(index int64, topicStub string) string {
 	}
 }
 
+// template for various names across EdgeX, most prominently name of Export Client
+func ExportName(index int64, topicStub string) string {
+	topicStub = strings.Title(topicStub)
+	capBitflow := strings.Title(Bitflow)
+	capDefaultEngineName := strings.Title(DefaultEngineName)
+
+	if index != -1 {
+		return fmt.Sprintf("%s%s%d%s%s",
+			capBitflow, capDefaultEngineName, index, topicStub, "Topic")
+	} else {
+		return fmt.Sprintf("%s-%s-%s-%s-%s",
+			capBitflow, capDefaultEngineName, "Any", topicStub, "Topic")
+	}
+}
+
 // template for bitflow engine role string
 // e.g. bitflow-engine-0-source-publisher
 func Role(index int64, topicStub string, role string) string {
@@ -43,6 +62,7 @@ func Role(index int64, topicStub string, role string) string {
 			Bitflow, DefaultEngineName, "any", topicStub, role)
 	}
 }
+
 // template for bitflow engine publisher string
 func Publisher(index int64, topicStub string) string {
 	return Role(index, topicStub, "publisher")

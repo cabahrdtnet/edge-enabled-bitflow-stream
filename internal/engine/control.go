@@ -147,10 +147,13 @@ func cleanUpValueDescriptors() {
 	for _, ID := range valueDescriptors.IDs {
 		reverseCommand := struct {
 			Command string	`json:"command"`
-			Payload string	`json:"payload"`
+			Payload models.ValueDescriptor	`json:"payload"`
 		}{
 			"clean_value_descriptor",
-			ID}
+			models.ValueDescriptor{
+				Id: ID,
+			},
+		}
 
 		b, err := json.Marshal(reverseCommand)
 		msg := string(b)
