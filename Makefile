@@ -41,16 +41,16 @@ docker-device-bitflow:
 	docker build \
 		-f ./Dockerfile_Device_Service \
 		--label "git_sha=$(GIT_SHA)" \
-		-t datenente/docker-device-bitflow:$(GIT_SHA) \
-		-t datenente/docker-device-bitflow:$(VERSION) \
+		-t datenente/device-bitflow:$(GIT_SHA) \
+		-t datenente/device-bitflow:$(VERSION) \
 		.
 
 docker-engine:
 	docker build \
 		-f ./Dockerfile_Script_Execution_Engine \
 		--label "git_sha=$(GIT_SHA)" \
-		-t datenente/docker-device-bitflow-engine:$(GIT_SHA) \
-		-t datenente/docker-device-bitflow-engine:$(VERSION) \
+		-t datenente/device-bitflow-engine:$(GIT_SHA) \
+		-t datenente/device-bitflow-engine:$(VERSION) \
         .
 
 run:
