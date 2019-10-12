@@ -65,6 +65,16 @@ func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.As
 	conf.URL.CoreCommand = s.config.CoreCommandSchema + "://" + s.config.CoreCommandHost + ":" + s.config.CoreCommandPort
 	conf.URL.ExportClient = s.config.ExportClientSchema + "://" + s.config.ExportClientHost + ":" + s.config.ExportClientPort
 	conf.URL.RulesEngine = s.config.RulesEngineSchema + "://" + s.config.RulesEngineHost + ":" + s.config.RulesEnginePort
+
+	conf.Docker.LocalDockerTLSVerify = s.config.LocalDockerTLSVerify
+	conf.Docker.LocalDockerHost = s.config.LocalDockerHost
+	conf.Docker.LocalDockerCertPath = s.config.LocalDockerCertPath
+	conf.Docker.LocalDockerMachineName = s.config.LocalDockerMachineName
+	conf.Docker.RemoteDockerTLSVerify = s.config.RemoteDockerTLSVerify
+	conf.Docker.RemoteDockerHost = s.config.RemoteDockerHost
+	conf.Docker.RemoteDockerCertPath = s.config.RemoteDockerCertPath
+	conf.Docker.RemoteDockerMachineName = s.config.RemoteDockerMachineName
+
 	communication.Broker = s.config.BrokerSchema + "://" + s.config.BrokerHost + ":" + s.config.BrokerPort
 
 	go InitRegistrySubscription()

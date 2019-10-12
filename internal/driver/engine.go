@@ -3,11 +3,15 @@ package driver
 import (
 	"context"
 	"fmt"
+	"github.com/datenente/device-bitflow/internal/communication"
 	"github.com/datenente/device-bitflow/internal/config"
 	iModels "github.com/datenente/device-bitflow/internal/models"
 	"github.com/datenente/device-bitflow/internal/naming"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients"
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
+	"io/ioutil"
+	"os"
+	"os/exec"
 	"strconv"
 )
 
@@ -85,26 +89,8 @@ func startEngine(name string) error {
 	reverseCommandChannel := make(chan reverseCommandRequest)
 	go InitSinkSubscription(index, sinkChannel)
 	go InitReverseCommandSubscription(index, reverseCommandChannel)
-	go createEngineInstance(index)
+	go createEngineInstance(engine)
 	return nil
-}
-
-// TODO implement this
-func createEngineInstance(index int64) {
-	// -name="engine-0"
-	// -script="input -> avg() -> append_latency() -> output"
-	// -input="bitflow/engine/0/source"
-	// -output="bitflow/engine/0/sink"
-	// -command="bitflow/engine/0/command"
-	// -reverse-command="bitflow/engine/0/reverse-command"
-	// -reverse-command-response="bitflow/engine/0/reverse-command-response"
-	// -broker="tcp://192.168.178.20:1883"
-	// -bitflow-params="-v -buf 20000"
-	//
-	// offload? interpret and run local or remote
-	// just set different DOCKER_HOST from remoteDockerHostSchema/Host/Port config
-	//
-	// docker run
 }
 
 // TODO implement this
@@ -117,4 +103,121 @@ func stopEngine(name string) {
 	// remove device from edgex
 	// remove engine's index from registry
 	// auto unsubscribe from channels...
+}
+
+func createEngineInstance(engine iModels.Engine) {
+	defer unsetDocker()
+
+	name := engine.Name
+	index, err := naming.ExtractIndex(name, "-", 1)
+	if err != nil {
+		BitflowDriver.lc.Error("couldn't extract index for " + name + " in engine instance" )
+		return
+	}
+
+	script := engine.Script
+	input := naming.Topic(index, naming.Source)
+	output := naming.Topic(index, naming.Sink)
+	command := naming.Topic(index, naming.Command)
+	reverseCommand := naming.Topic(index, naming.ReverseCommand)
+	reverseCommandResponse := naming.Topic(index, naming.ReverseCommandResponse)
+	broker := communication.Broker
+	condition := engine.OffloadCondition
+	//bitflowParams := engine.BitflowParams
+
+	// offloading
+	location, err := where(index, condition)
+	if err != nil {
+		formatted := fmt.Sprintf("couldn't derive offload location: %v", err)
+		BitflowDriver.lc.Error(formatted)
+		return
+	}
+
+	if location == "local" {
+		setLocalDocker()
+		return
+	}
+
+	if location == "remote" {
+		setRemoteDocker()
+		return
+	}
+
+	docker := "docker"
+	image := config.DockerEngineImage
+	args := []string{"run", image,
+		"-name", name,
+		"-script", script,
+		"-input", input,
+		"-output", output,
+		"-command", command,
+		"-reverseCommand", reverseCommand,
+		"-reverseCommandResponse", reverseCommandResponse,
+		"-broker", broker,
+		//-"bitflow-params"="-v -buf 20000"
+	}
+
+	cmd := exec.Command(docker, args...)
+	if err := cmd.Run(); err != nil {
+		formatted := fmt.Sprintf("couldn't run docker instance with args %s: %v", args, err)
+		BitflowDriver.lc.Error(formatted)
+	}
+}
+
+// decide where offloading occurs, either locally or remotely
+func where(index int64, condition string) (string, error) {
+	fileName := naming.Name(index) + "-" + "offload.go"
+	defer os.Remove(fileName)
+	data := []byte(condition)
+	err := ioutil.WriteFile(fileName, data, 0644)
+	if err != nil {
+		return "", fmt.Errorf("couldn't write temp offload condition file %s: %v", fileName, err)
+	}
+
+	goBin := "go"
+	args := []string{"run", fileName}
+	cmd := exec.Command(goBin, args...)
+	outputBytes, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("couldn't write temp offload condition file %s: %v", fileName, err)
+	}
+	output := string(outputBytes)
+	return output, nil
+}
+
+func set(key string, env string) error {
+	err := os.Setenv(key, env)
+	if err != nil {
+		return fmt.Errorf("couldn't set %s env variable: %v", env, err)
+	}
+	return nil
+}
+
+func unset(key string) error {
+	err := os.Unsetenv(key)
+	if err != nil {
+		return fmt.Errorf("couldn't unset %s env variable: %v", key, err)
+	}
+	return nil
+}
+
+func setLocalDocker() {
+	set(config.DockerTLSVerify, config.Docker.LocalDockerTLSVerify)
+	set(config.DockerHost, config.Docker.LocalDockerHost)
+	set(config.DockerCertPath, config.Docker.LocalDockerCertPath)
+	set(config.DockerMachineName, config.Docker.LocalDockerMachineName)
+}
+
+func setRemoteDocker() {
+	set(config.DockerTLSVerify, config.Docker.RemoteDockerTLSVerify)
+	set(config.DockerHost, config.Docker.RemoteDockerHost)
+	set(config.DockerCertPath, config.Docker.RemoteDockerCertPath)
+	set(config.DockerMachineName, config.Docker.RemoteDockerMachineName)
+}
+
+func unsetDocker() {
+	unset(config.DockerTLSVerify)
+	unset(config.DockerHost)
+	unset(config.DockerCertPath)
+	unset(config.DockerMachineName)
 }

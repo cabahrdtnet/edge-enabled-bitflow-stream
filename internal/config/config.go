@@ -19,6 +19,11 @@ import (
 
 const (
 	Protocol = "mqtt"
+	DockerTLSVerify = "DOCKER_TLS_VERIFY"
+	DockerHost = "DOCKER_HOST"
+	DockerCertPath = "DOCKER_CERT_PATH"
+	DockerMachineName = "DOCKER_MACHINE_NAME"
+	DockerEngineImage = "datenente/docker-device-bitflow-engine:1.0.0-dev"
 )
 
 var (
@@ -28,6 +33,17 @@ var (
 		CoreCommand string
 		ExportClient string
 		RulesEngine string
+	}{}
+
+	Docker = struct {
+		LocalDockerTLSVerify string
+		LocalDockerHost string
+		LocalDockerCertPath string
+		LocalDockerMachineName string
+		RemoteDockerTLSVerify string
+		RemoteDockerHost string
+		RemoteDockerCertPath string
+		RemoteDockerMachineName string
 	}{}
 )
 
@@ -60,6 +76,14 @@ type Configuration struct {
 	RulesEngineSchema string
 	RulesEngineHost string
 	RulesEnginePort string
+	LocalDockerTLSVerify string
+	LocalDockerHost string
+	LocalDockerCertPath string
+	LocalDockerMachineName string
+	RemoteDockerTLSVerify string
+	RemoteDockerHost string
+	RemoteDockerCertPath string
+	RemoteDockerMachineName string
 }
 
 // CreateDriverConfig use to load driver config for incoming listener and response listener
