@@ -23,7 +23,7 @@ const (
 	DockerHost = "DOCKER_HOST"
 	DockerCertPath = "DOCKER_CERT_PATH"
 	DockerMachineName = "DOCKER_MACHINE_NAME"
-	DockerEngineImage = "datenente/docker-device-bitflow-engine:1.0.0-dev"
+	DockerEngineImage = "datenente/docker-device-bitflow-engine:1.0.0"
 )
 
 var (
@@ -139,4 +139,3 @@ func load(config map[string]string, des interface{}) error {
 	}
 	return nil
 }
-
