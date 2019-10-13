@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/datenente/device-bitflow/internal/communication"
-	"github.com/edgexfoundry/go-mod-core-contracts/models"
+	contract "github.com/edgexfoundry/go-mod-core-contracts/models"
 	"sync"
 )
 
@@ -86,10 +86,10 @@ func registerValueDescriptors() {
 	if !ok {
 		panic("Initial processed event couldn't be retrieved, corresponding channel has been closed.")
 	}
-	vds := []models.ValueDescriptor{}
+	vds := []contract.ValueDescriptor{}
 
 	for _, reading := range initialProcessedEvent.Readings {
-		vd := models.ValueDescriptor{
+		vd := contract.ValueDescriptor{
 			Name:
 				reading.Name,
 			Description:
@@ -110,7 +110,7 @@ func registerValueDescriptors() {
 	for _, vd := range vds {
 		reverseCommand := struct {
 			Command string                  `json:"command"`
-			Payload models.ValueDescriptor  `json:"payload"`
+			Payload contract.ValueDescriptor  `json:"payload"`
 		}{
 			"register_value_descriptor",
 			vd}
@@ -147,10 +147,10 @@ func cleanUpValueDescriptors() {
 	for _, ID := range valueDescriptors.IDs {
 		reverseCommand := struct {
 			Command string	`json:"command"`
-			Payload models.ValueDescriptor	`json:"payload"`
+			Payload contract.ValueDescriptor	`json:"payload"`
 		}{
 			"clean_value_descriptor",
-			models.ValueDescriptor{
+			contract.ValueDescriptor{
 				Id: ID,
 			},
 		}

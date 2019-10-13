@@ -2,7 +2,7 @@ package engine
 
 import (
 	"fmt"
-	"github.com/edgexfoundry/go-mod-core-contracts/models"
+	contract "github.com/edgexfoundry/go-mod-core-contracts/models"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"regexp"
@@ -18,7 +18,7 @@ const (
 )
 
 // header for stream based on readings
-func header(readings []models.Reading) string {
+func header(readings []contract.Reading) string {
 	header := "time,tags"
 	for _, r := range readings {
 		header += "," + r.Name
@@ -27,8 +27,8 @@ func header(readings []models.Reading) string {
 }
 
 // convert EdgeX event bitflow csv sample
-func etos(e models.Event) (string, error) {
-	if cmp.Equal(e, models.Event{}, cmpopts.IgnoreUnexported(models.Event{})) {
+func etos(e contract.Event) (string, error) {
+	if cmp.Equal(e, contract.Event{}, cmpopts.IgnoreUnexported(contract.Event{})) {
 		return "", fmt.Errorf("event is empty")
 	}
 
@@ -49,9 +49,9 @@ func etos(e models.Event) (string, error) {
 }
 
 // convert bitflow csv sample to EdgeX event
-func stoe(deviceName string, sample string, header string) (models.Event, error) {
+func stoe(deviceName string, sample string, header string) (contract.Event, error) {
 	if sample == "" || deviceName == "" || header == "" {
-		return models.Event{}, fmt.Errorf(
+		return contract.Event{}, fmt.Errorf(
 			"sample, deviceName or header are empty (sample:%s, deviceName:%s, header:%s)",
 			sample, deviceName, header)
 	}
@@ -65,12 +65,12 @@ func stoe(deviceName string, sample string, header string) (models.Event, error)
 	now := time.Now().UTC().Format(layout)
 	eventTime, err := time.Parse(layout, now)
 	if err != nil {
-		return models.Event{}, fmt.Errorf("parsing error in stoe: %s", err.Error())
+		return contract.Event{}, fmt.Errorf("parsing error in stoe: %s", err.Error())
 	}
 
-	readings := []models.Reading{}
+	readings := []contract.Reading{}
 	for index := range metricNames {
-		reading := models.Reading{
+		reading := contract.Reading{
 			Name:   metricNames[index],
 			Value:  metrics[index],
 			Origin: eventTime.UnixNano() / 1000 / 1000,
@@ -78,7 +78,7 @@ func stoe(deviceName string, sample string, header string) (models.Event, error)
 		readings = append(readings, reading)
 	}
 
-	return models.Event{
+	return contract.Event{
 		Device:   deviceName,
 		Origin:   eventTime.UnixNano() / 1000 / 1000,
 		Readings: readings,

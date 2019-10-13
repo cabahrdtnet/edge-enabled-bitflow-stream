@@ -21,7 +21,7 @@ type Actuation struct {
 
 // create rule from actuation and device index string to differentiate between identical rules between engines
 // there is support for one rule per engine accordingly
-func (a *Actuation) InferRule() (Rule, error) {
+func (a *Actuation) inferRule() (Rule, error) {
 	// set rule name
 	ruleName := a.DeviceName + "-check"
 

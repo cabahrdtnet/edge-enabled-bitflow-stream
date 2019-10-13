@@ -3,30 +3,21 @@ package objects
 import (
 	"fmt"
 	"github.com/datenente/device-bitflow/internal/communication"
-	"github.com/datenente/device-bitflow/internal/config"
 	"github.com/datenente/device-bitflow/internal/naming"
-	"github.com/eclipse/paho.mqtt.golang"
-)
-
-var (
-	DefaultScript = `input -> output`
-	DefaultInputDeviceNames = []string{}
-	DefaultInputValueDescriptorNames = []string{}
-	DefaultActuation = Actuation{}
-	DefaultOffloadCondition = `func offload() string { return "local" })`
 )
 
 type Engine struct {
+	booted                    bool        // is set when engine is started
 	Index                     int64       // index of engine, e.g. 1
-	SinkSubscriber            mqtt.Client // mqtt client that connects from events of engine, e.g. "bitflow/engine/1/sink"
-	ReverseCommandSubscriber  mqtt.Client // mqtt client that connects to reverse commands from engine, e.g. "bitflow/engine/1/reverse-command"
 	Name                      string      // name of engine, e.g. engine-1
-	Script                    string      // script contents
-	InputDeviceNames          []string    // list of devices to get events from
-	InputValueDescriptorNames []string    // list of value descriptors an event's readings are allowed to contain
-	Actuation                 Actuation   // name of actuation in EdgeX
+	Configuration             EngineConfiguration // configuration for current engine
+	Communication             EngineCommunication
 	Rule                      Rule        // rule based on actuation
-	OffloadCondition          string      // offload function's signature and body
+	OffloadTarget			  string      // engine is offloaded to string target
+}
+
+func (e *Engine) HasBooted() bool {
+	return e.booted
 }
 
 // sets index and adjusts name accordingly
@@ -47,56 +38,24 @@ func (e *Engine) setName(name string) error {
 	return nil
 }
 
-// set rule based on actuation
-func (e *Engine) setRule(actuation Actuation) error {
-	rule, err := actuation.InferRule()
+// start engine
+func (e *Engine) start() error {
+	e.Communication.Setup()
+
+	instance := Instance{Engine: *e}
+	err := instance.Create()
 	if err != nil {
-		err = fmt.Errorf("couldn't get index from device name: %v", err)
-		return err
+		return fmt.Errorf("couldn't start engine: %v", err)
 	}
-	e.Rule = rule
+
+	e.booted = true
 	return nil
 }
 
-func (e *Engine) Start() error {
-	if e.Actuation.DeviceName != "" {
-		rule, err := e.Actuation.InferRule()
-		e.Rule = rule
-		if err != nil {
-			return fmt.Errorf("can't start engine %s, rule is faulty, actuation was %v", e.Name, e.Actuation)
-		}
-		err = rule.Add()
-		if err != nil {
-			return fmt.Errorf("can't start engine %s, rule couldn't be added to rules engine", e.Name)
-		}
-	}
+// stop engine and deregister value descriptors
+func (e *Engine) stop() error {
+	e.booted = false
 
-	exportClient := ExportClient{
-		BrokerName:   config.Broker.Name,
-		BrokerSchema: config.Broker.Schema,
-		BrokerHost:   config.Broker.Host,
-		BrokerPort:   config.Broker.Port,
-	}
-
-	// add engine to export client
-	exportClient.Add(*e)
-
-	//sinkChannel := make(chan models.Event)
-	//reverseCommandChannel := make(chan reverseCommandRequest)
-	//go InitSinkSubscription(index, sinkChannel)
-	//go InitReverseCommandSubscription(index, reverseCommandChannel)
-
-	// TODO move handleSinkEvent here
-	// TODO move handleReverseCommand here
-	// TODO move InitRegistrySubscription here
-	// TODO move InitSinkSubscription here
-
-	//go createEngineInstance(e)
-	return nil
-}
-
-// stop engine and clean up related values
-func (e *Engine) Stop() error {
 	// instruct engine to shutdown
 	shutdown := "shutdown"
 	communication.Publish(
@@ -105,28 +64,75 @@ func (e *Engine) Stop() error {
 		shutdown)
 
 	// stop subscribing to engine's commands and events
-	communication.Disconnect(e.SinkSubscriber)
-	communication.Disconnect(e.ReverseCommandSubscriber)
-
-	// clean up rule, registration and device from EdgeX
-	err := e.Rule.Remove()
-	if err != nil {
-		return fmt.Errorf("couldn't remove rule %s of engine %s from EdgeX: %v",
-			e.Rule.Name, e.Name, err)
-	}
-	return nil
+	e.Communication.Teardown()
 
 	// value descriptors are cleaned up in the background on behalf of device in
 	// handleReverseCommand, when engine shuts down
 
 	// TODO create graphic for MQTT hierarchy, whos's publishing what to whom and why
 	// TODO explain MQTT hierarchy
-	// remove registration
-	// remove device from edgex
-	// remove engine's index from registry
-	// auto unsubscribe from channels...
-	// unsubscribe "bitflow/engine/index_int/sink" as bitflow-engine-1-sink-subscriber
-	// unsubscribe "bitflow/engine/index_int/reverse-command" as bitflow-engine-1-reverse-command-subscriber
+	return nil
+}
+
+// set rule based on actuation
+func (e *Engine) inferRule() error {
+	rule, err := e.Configuration.InferRule()
+	if err != nil {
+		err = fmt.Errorf("couldn't infer rule for actuation %s: %v", e.Configuration.Actuation, err)
+		return err
+	}
+	e.Rule = rule
+	return nil
+}
+
+// check if engine with this configuration can be started
+func (e *Engine) startable() bool {
+	if e.Configuration.InputDeviceNamesUnset() && e.Configuration.InputValueDescriptorNamesUnset() {
+		return false
+	}
+
+	return true
+}
+
+// add rule and register as export client
+func (e *Engine) register() error {
+	// add rule to rules engine
+	if e.Configuration.ActuationSet() {
+		err := e.inferRule()
+		if err != nil {
+			return fmt.Errorf("can't register engine %s as rule is faulty with actuation %v", e.Name, e.Configuration.Actuation)
+		}
+		err = e.Rule.Add()
+		if err != nil {
+			return fmt.Errorf("can't register engine %s as rule couldn't be added to rules engine", e.Name)
+		}
+	}
+
+	// add engine as export client
+	exportClient := ExportClient{}
+	err := exportClient.Add(*e)
+	if err != nil {
+		return fmt.Errorf("can't register engine %s, rule couldn't be added to rules engine", e.Name)
+	}
+	return nil
+}
+
+// remove rule and export client registration
+func (e *Engine) deregister() error {
+	// remove rule associated with engine
+	err := e.Rule.Remove()
+	if err != nil {
+		return fmt.Errorf("couldn't remove rule %s of engine %s: %v", e.Rule.Name, e.Name, err)
+	}
+
+	// remove engine as export client
+	exportClient := ExportClient{}
+	err = exportClient.Remove(*e)
+	if err != nil {
+		return fmt.Errorf("couldn't remove export client registration for engine %s: %v", e.Name, err)
+	}
+
+	return nil
 }
 
 // CLI publish to bitflow/engine/0/registry-request with text `0`

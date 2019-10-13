@@ -9,7 +9,7 @@ import (
 
 type Instance struct {
 	Engine    Engine
-	Location  location
+	location  location
 	docker   *exec.Cmd
 }
 
@@ -33,7 +33,7 @@ func (i *Instance) prepare() error {
 	defer env.unset()
 
 	// set docker environment based on desired execution location
-	condition := i.Engine.OffloadCondition
+	condition := i.Engine.Configuration.OffloadCondition
 	location := location{
 		EngineName: i.Engine.Name,
 	}
@@ -63,7 +63,7 @@ func (i *Instance) execute() error {
 // set arguments of instance, i.e. docker run "instance" args...
 func (i *Instance) args() []string {
 	name := i.Engine.Name
-	script := i.Engine.Script
+	script := i.Engine.Configuration.Script
 	input := naming.Topic(i.Engine.Index, naming.Source)
 	output := naming.Topic(i.Engine.Index, naming.Sink)
 	command := naming.Topic(i.Engine.Index, naming.Command)

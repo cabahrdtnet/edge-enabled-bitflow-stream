@@ -11,6 +11,8 @@ const (
 	DeviceService = "device-bitflow"
 	DeviceProfile = "Bitflow-Script-Execution-Engine"
 	DefaultEngineName = "engine"
+	Local            = "local"
+	Remote			 = "remote"
 	Bitflow          = "bitflow"
 	Command          = "command"
 	Source           = "source"

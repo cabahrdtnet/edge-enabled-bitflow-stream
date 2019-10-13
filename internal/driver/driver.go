@@ -29,7 +29,6 @@ import (
 )
 
 var (
-	log logger.LoggingClient
 	registry objects.Registry
 )
 
@@ -45,7 +44,7 @@ type Driver struct {
 func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.AsyncValues) error {
 	s.lc = lc
 	s.asyncCh = asyncCh
-	log = lc
+	conf.Log = lc
 
 	registry := objects.Registry{}
 	err := registry.Init()
@@ -185,12 +184,7 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		}
 
 		if action == "start" {
-			engine, err := registry.Get(deviceName)
-			if err != nil {
-				return fmt.Errorf("couldn't get engine in HandleWriteCommands: %v", err)
-			}
-
-			err = engine.Start()
+			err = registry.Start(index)
 			if err != nil {
 				return fmt.Errorf("couldn't start engine in HandleWriteCommands: %v", err)
 			}
@@ -205,19 +199,28 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		return fmt.Errorf("couldn't determine action %s of %s command: %v", action, params[0].DeviceResourceName, err)
 
 	case "script":
+		//contents, err := params[0].StringValue()
+		//if err != nil {
+		//	err = fmt.Errorf("couldn't determine parameter contents of %s command: %v", params[0].DeviceResourceName, err)
+		//	return err
+		//}
+		//
+		//template := objects.Engine{
+		//	Script: contents,
+		//}
+		//
+		//err = registry.Update(index, template)
+		//if err != nil {
+		//	err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
+		//	return err
+		//}
+		engine, err := registry.Get(deviceName)
+		if err != nil {
+			return fmt.Errorf("couldn't get engine in HandleWriteCommands: %v", err)
+		}
 		contents, err := params[0].StringValue()
 		if err != nil {
 			err = fmt.Errorf("couldn't determine parameter contents of %s command: %v", params[0].DeviceResourceName, err)
-			return err
-		}
-
-		template := objects.Engine{
-			Script: contents,
-		}
-
-		err = registry.Update(index, template)
-		if err != nil {
-			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err
 		}
 
@@ -259,7 +262,7 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		inputValueDescriptorNames := strings.Split(strings.TrimSpace(valueDescriptors), ",")
 
 		template := objects.Engine{
-			InputDeviceNames:          inputDeviceNames,
+			ConfiInputDeviceNames:          inputDeviceNames,
 			InputValueDescriptorNames: inputValueDescriptorNames,
 		}
 

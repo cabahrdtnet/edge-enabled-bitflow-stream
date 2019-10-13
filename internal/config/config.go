@@ -12,6 +12,7 @@ package config
 import (
 	"fmt"
 	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/logger"
 	"reflect"
 	"strconv"
 
@@ -19,6 +20,8 @@ import (
 )
 
 var (
+	Log logger.LoggingClient
+
 	Broker = struct {
 		Name string
 		Schema string
