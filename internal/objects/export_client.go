@@ -51,7 +51,11 @@ func (ec *ExportClient) Add(engine Engine) error {
 	}
 
 	err := requestPost(registration, engine.Index)
-	return err
+	if err != nil && err.(ExportClientError).OtherError {
+		return fmt.Errorf("can't add export client: %v", err)
+	}
+
+	return nil
 }
 
 // remove engine from as export client

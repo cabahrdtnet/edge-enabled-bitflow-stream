@@ -64,7 +64,8 @@ func (e *Engine) stop() error {
 		shutdown)
 
 	// stop subscribing to engine's commands and events
-	e.Communication.Teardown()
+	// TODO what's wrong here?
+	//e.Communication.Teardown()
 
 	// value descriptors are cleaned up in the background on behalf of device in
 	// handleReverseCommand, when engine shuts down

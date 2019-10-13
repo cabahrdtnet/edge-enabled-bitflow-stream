@@ -9,17 +9,19 @@ import (
 
 type Instance struct {
 	Engine    Engine
+	Environment environment
 	location  location
 	docker   *exec.Cmd
 }
 
 // prepare an instance and execute it
 func (i *Instance) Create() error {
-	err := i.prepare()
+	target, err := i.prepare()
 	if err != nil {
 		return fmt.Errorf("error in instance preparation: %v", err)
 	}
-	err = i.execute()
+
+	err = i.execute(target)
 	if err != nil {
 		return fmt.Errorf("error in instance execution: %v", err)
 	}
@@ -27,11 +29,7 @@ func (i *Instance) Create() error {
 }
 
 // prepare execution of instance
-func (i *Instance) prepare() error {
-	// init environment struct and defer clean up
-	env := environment{}
-	defer env.unset()
-
+func (i *Instance) prepare() (string, error) {
 	// set docker environment based on desired execution location
 	condition := i.Engine.Configuration.OffloadCondition
 	location := location{
@@ -39,24 +37,28 @@ func (i *Instance) prepare() error {
 	}
 	err := location.infer(condition)
 	if err != nil {
-		return fmt.Errorf("couldn't get execution location: %v", err)
+		return "", fmt.Errorf("couldn't get execution location: %v", err)
 	}
-	env.set(location.Target)
 
 	// docker run config.DockerEngineImage
 	dockerArgs := []string{"run", naming.DockerEngineImage}
 	instanceArgs := i.args()
 	args := append(dockerArgs, instanceArgs...)
 	i.docker = exec.Command(naming.DockerCommand, args...)
-	return nil
+	return location.Target, nil
 }
 
 // execute instance
-func (i *Instance) execute() error {
+func (i *Instance) execute(target string) error {
+	env := environment{Target:target}
+	env.set()
+	defer env.unset()
+
 	// TODO err is also not nil if engine shuts down directly after being started without initial event
-	if err := i.docker.Run(); err != nil {
+	if err := i.docker.Start(); err != nil {
 		return fmt.Errorf("couldn't run docker instance with args %s: %v", i.args(), err)
 	}
+	// todo env
 	return nil
 }
 

@@ -29,13 +29,14 @@ import (
 )
 
 var (
-	registry objects.Registry
+	driver *Driver
 )
 
 type Driver struct {
 	lc      logger.LoggingClient
 	asyncCh chan<- *dsModels.AsyncValues
 	config  *conf.Configuration
+	registry objects.Registry
 	// see [@GopherCon2017Lightning]
 }
 
@@ -45,9 +46,10 @@ func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.As
 	s.lc = lc
 	s.asyncCh = asyncCh
 	conf.Log = lc
+	driver = s
 
-	registry := objects.Registry{}
-	err := registry.Init()
+	s.registry = objects.Registry{}
+	err := s.registry.Init()
 	if err != nil {
 		panic(fmt.Errorf("could not init registry: %v", err))
 	}
@@ -82,7 +84,7 @@ func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.As
 	}
 	conf.Broker.Name = "MqttBroker"
 	conf.Broker.Schema = s.config.BrokerSchema
-	conf.Broker.Host = s.config.BrokerSchema
+	conf.Broker.Host = s.config.BrokerHost
 	conf.Broker.Port = int(brokerPort64)
 
 	communication.Broker = s.config.BrokerSchema + "://" + s.config.BrokerHost + ":" + s.config.BrokerPort
@@ -184,7 +186,7 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		}
 
 		if action == "start" {
-			err = registry.Start(index)
+			err = s.registry.Start(index)
 			if err != nil {
 				return fmt.Errorf("couldn't start engine in HandleWriteCommands: %v", err)
 			}
@@ -192,35 +194,31 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		}
 
 		if action == "stop" {
-			s.lc.Info("Engine is stopping! So boring!")
+			err = s.registry.Stop(index)
+			if err != nil {
+				return fmt.Errorf("couldn't stop engine in HandleWriteCommands: %v", err)
+			}
 			return nil
 		}
 
 		return fmt.Errorf("couldn't determine action %s of %s command: %v", action, params[0].DeviceResourceName, err)
 
 	case "script":
-		//contents, err := params[0].StringValue()
-		//if err != nil {
-		//	err = fmt.Errorf("couldn't determine parameter contents of %s command: %v", params[0].DeviceResourceName, err)
-		//	return err
-		//}
-		//
-		//template := objects.Engine{
-		//	Script: contents,
-		//}
-		//
-		//err = registry.Update(index, template)
-		//if err != nil {
-		//	err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
-		//	return err
-		//}
-		engine, err := registry.Get(deviceName)
-		if err != nil {
-			return fmt.Errorf("couldn't get engine in HandleWriteCommands: %v", err)
-		}
 		contents, err := params[0].StringValue()
 		if err != nil {
 			err = fmt.Errorf("couldn't determine parameter contents of %s command: %v", params[0].DeviceResourceName, err)
+			return err
+		}
+
+		template := objects.Engine{
+			Configuration: objects.EngineConfiguration{
+				Script: contents,
+			},
+		}
+
+		err = s.registry.Update(index, template)
+		if err != nil {
+			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err
 		}
 
@@ -262,11 +260,13 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		inputValueDescriptorNames := strings.Split(strings.TrimSpace(valueDescriptors), ",")
 
 		template := objects.Engine{
-			ConfiInputDeviceNames:          inputDeviceNames,
-			InputValueDescriptorNames: inputValueDescriptorNames,
+			Configuration: objects.EngineConfiguration{
+				InputDeviceNames:          inputDeviceNames,
+				InputValueDescriptorNames: inputValueDescriptorNames,
+			},
 		}
 
-		err = registry.Update(index, template)
+		err = s.registry.Update(index, template)
 		if err != nil {
 			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err
@@ -360,10 +360,12 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		}
 
 		template := objects.Engine{
-			Actuation: actuation,
+			Configuration: objects.EngineConfiguration{
+				Actuation: actuation,
+			},
 		}
 
-		err = registry.Update(index, template)
+		err = s.registry.Update(index, template)
 		if err != nil {
 			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err
@@ -379,10 +381,12 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		}
 
 		template := objects.Engine{
-			OffloadCondition: offloadCondition,
+			Configuration: objects.EngineConfiguration{
+				OffloadCondition: offloadCondition,
+			},
 		}
 
-		err = registry.Update(index, template)
+		err = s.registry.Update(index, template)
 		if err != nil {
 			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err

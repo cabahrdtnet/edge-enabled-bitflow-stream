@@ -10,13 +10,13 @@ import (
 )
 
 type Registry struct {
-	engines map[string]Engine
+	engines map[string]*Engine
 	mutex   sync.RWMutex
 }
 
 // as the registry is not persisted, we dynamically load it from existing devices
 func (r *Registry) Init() error {
-	r.engines = make(map[string]Engine)
+	r.engines = make(map[string]*Engine)
 	devices := sdk.RunningService().Devices()
 
 	for _, device := range devices {
@@ -80,6 +80,8 @@ func (r *Registry) Update(index int64, template Engine) error {
 	if err != nil {
 		return fmt.Errorf("can't update engine with name %s, because it does not exist in engine registry", name)
 	}
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
 	if template.Configuration.ScriptSet() {
 		engine.Configuration.Script = template.Configuration.Script
@@ -123,6 +125,7 @@ func (r *Registry) Register(index int64) error {
 		return fmt.Errorf("couldn't register engine in engine registry: %v", err)
 	}
 
+	// TODO handle duplicates, as these are acceptable
 	err = r.addDevice(index)
 	if err != nil {
 		return fmt.Errorf("couldn't register engine in engine registry: %v", err)
@@ -131,7 +134,7 @@ func (r *Registry) Register(index int64) error {
 	return nil
 }
 
-// deregister all associated metadata of a stopped engine
+// deregister all associated metadata of an engine
 func (r *Registry) Deregister(index int64) error {
 	name := naming.Name(index)
 	engine, err  := r.get(index)
@@ -140,6 +143,7 @@ func (r *Registry) Deregister(index int64) error {
 	}
 
 	// check if engine still runs, if so stop
+	// TODO this is wrong
 	if engine.HasBooted() {
 		err = engine.stop()
 		if err != nil {
@@ -169,13 +173,13 @@ func (r *Registry) Deregister(index int64) error {
 }
 
 // get engine by index
-func (r *Registry) get(index int64) (Engine, error) {
+func (r *Registry) get(index int64) (*Engine, error) {
 	r.mutex.RLock()
-	defer r.mutex.Unlock()
+	defer r.mutex.RUnlock()
 	name := naming.Name(index)
 	engine, exists := r.engines[name]
 	if ! exists {
-		return Engine{}, fmt.Errorf("can't get engine: %s does not exist", engine.Name)
+		return &Engine{}, fmt.Errorf("can't get engine: %s does not exist", engine.Name)
 	}
 	return engine, nil
 }
@@ -188,7 +192,7 @@ func (r *Registry) addIndexedDefaultEngine(index int64) error {
 	name := naming.Name(index)
 	_, exists := r.engines[name]
 	if ! exists {
-		r.engines[name] = Engine{
+		r.engines[name] = &Engine{
 			Index: index,
 			Name:  name,
 			Configuration: EngineConfiguration{

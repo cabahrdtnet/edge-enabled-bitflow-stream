@@ -33,10 +33,10 @@ func handleRegistryRequest() {
 
 			if request > 0 {
 				index = request
-				err = registry.Register(index)
+				err = driver.registry.Register(index)
 			} else {
 				index = -request
-				err = registry.Deregister(index)
+				err = driver.registry.Deregister(index)
 			}
 
 			if err == nil {
@@ -47,25 +47,30 @@ func handleRegistryRequest() {
 				rsp.Error = err.Error()
 			}
 
-			payload, _ := json.Marshal(rsp)
-			topic := naming.Topic(index, naming.RegistryResponse)
-			clientID := naming.Publisher(index, naming.RegistryResponse)
-			msg := string(payload)
-			communication.Publish(topic, clientID, msg)
+			publishResponse(rsp, index)
 
 		case err := <- registration.err:
 			var rsp response
 
 			rsp.Message = "failure"
-			rsp.Error = err.Error()
+			rsp.Error = err.value.Error()
 
-			payload, err := json.Marshal(rsp)
-			if err != nil {
-				log.Error(err.Error())
+			payload, payloadErr := json.Marshal(rsp)
+			if payloadErr != nil {
+				config.Log.Error(payloadErr.Error())
 			}
 			msg := string(payload)
-			log.Error(msg)
-			// TODO send this back to server
+			config.Log.Error(msg)
+			publishResponse(rsp, err.index)
 		}
 	}
+}
+
+// publish response to engine with given index
+func publishResponse(rsp response, index int64) {
+	payload, _ := json.Marshal(rsp)
+	topic := naming.Topic(index, naming.RegistryResponse)
+	clientID := naming.Publisher(index, naming.RegistryResponse)
+	msg := string(payload)
+	communication.Publish(topic, clientID, msg)
 }

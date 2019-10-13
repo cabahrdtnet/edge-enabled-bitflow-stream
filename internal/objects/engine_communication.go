@@ -9,6 +9,7 @@ import (
 	"github.com/datenente/device-bitflow/internal/naming"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/types"
 	contract "github.com/edgexfoundry/go-mod-core-contracts/models"
 )
 
@@ -96,13 +97,33 @@ func (ec *EngineCommunication) handleReverseCommand() {
 			vd := rcr.Payload
 			url := config.URL.CoreData + clients.ApiValueDescriptorRoute
 			ID, err := clients.PostJsonRequest(url, vd, context.TODO())
-			if err != nil {
-				formatted := fmt.Sprintf("couldn't register value descriptor in core data: %v", err)
+			msg := ID
+			if err != nil && err.(*types.ErrServiceClient).StatusCode == 409 {
+				formatted := fmt.Sprintf("couldn't register value descriptor: %v", err)
 				config.Log.Debug(formatted)
+				url += "/name/" + vd.Name
+				payload, err := clients.GetRequest(url, context.TODO())
+				if err != nil {
+					formatted := fmt.Sprintf("couldn't get already registered value descriptor: %v", err)
+					config.Log.Debug(formatted)
+					msg = "error"
+				}
+				var alreadyRegisteredValueDescriptor contract.ValueDescriptor
+				err = json.Unmarshal(payload, &alreadyRegisteredValueDescriptor)
+				if err != nil {
+					formatted := fmt.Sprintf("couldn't marshal already registered value descriptor: %v", err)
+					config.Log.Debug(formatted)
+					msg = "error"
+				}
+				msg = alreadyRegisteredValueDescriptor.Id
+			} else {
+				formatted := fmt.Sprintf("couldn't register value descriptor: %v", err)
+				config.Log.Debug(formatted)
+				msg = "error"
 			}
+
 			topic := naming.Topic(ec.Index, naming.ReverseCommandResponse)
 			clientID := naming.Publisher(ec.Index, naming.ReverseCommandResponse)
-			msg := ID
 			communication.Publish(topic, clientID, msg)
 			continue
 		}
@@ -116,6 +137,7 @@ func (ec *EngineCommunication) handleReverseCommand() {
 				formatted := fmt.Sprintf("couldn't clean value descriptor from core data: %v", err)
 				config.Log.Debug(formatted)
 			}
+			continue
 		}
 	}
 	config.Log.Info("reverse command channel of " + naming.Name(ec.Index) + " is closed")

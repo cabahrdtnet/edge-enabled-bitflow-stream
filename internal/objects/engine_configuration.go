@@ -74,7 +74,7 @@ func (ec *EngineConfiguration) ActuationSet() bool {
 
 // check if actuation is unset
 func (ec *EngineConfiguration) ActuationUnset() bool {
-	return ! cmp.Equal(ec.Actuation, DefaultActuation)
+	return cmp.Equal(ec.Actuation, DefaultActuation)
 }
 
 // check if offloading condition is set

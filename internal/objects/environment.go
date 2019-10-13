@@ -8,11 +8,11 @@ import (
 )
 
 type environment struct {
-
+	Target string
 }
 
-func (e environment) set(target string) error {
-	switch target {
+func (e environment) set() error {
+	switch e.Target {
 	case "local":
 		set(naming.DockerTLSVerify, config.Docker.LocalDockerTLSVerify)
 		set(naming.DockerHost, config.Docker.LocalDockerHost)
@@ -28,7 +28,7 @@ func (e environment) set(target string) error {
 		return nil
 
 	default:
-		return fmt.Errorf("unknown target for setting environment: %s", target)
+		return fmt.Errorf("unknown target for setting environment: %s", e.Target)
 	}
 }
 

@@ -83,8 +83,7 @@ func (a *Actuation) getIDofDevice() (string, error) {
 
 // get ID of command for action in rule
 func (a *Actuation) getIDOfCommand() (string, error) {
-	ruleName := a.DeviceName + "-check"
-	url := config.URL.CoreCommand + clients.ApiDeviceRoute + "/name/" + ruleName
+	url := config.URL.CoreCommand + clients.ApiDeviceRoute + "/name/" + a.DeviceName
 	payload, err := clients.GetRequest(url, context.TODO())
 	if err != nil {
 		return "", fmt.Errorf("couldn't get command response %s from core command to get command ID: %v", a.DeviceName, err)

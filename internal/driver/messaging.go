@@ -39,26 +39,40 @@ var (
 
 	registration = struct{
 		request chan int64
-		err chan error
+		err chan RegistrationError
 	}{
 		make(chan int64),
-		make(chan error)}
+		make(chan RegistrationError,
+	)}
 
 	subscriber = struct{
 		registry MQTT.Client
 	}{}
 )
 
+type RegistrationError struct {
+	index int64
+	value error
+}
+
 // handles registry message for devices so that device service API can be used on a device
 func handleRegistryRequestMessage(client MQTT.Client, msg MQTT.Message) {
 	index, err := naming.ExtractIndex(msg.Topic(), "/", 2)
 	if err != nil {
-		registration.err <- err
+		regErr := RegistrationError{
+			index: index,
+			value: err,
+		}
+		registration.err <- regErr
 		return
 	}
 
 	if index == 0 {
-		registration.err <- fmt.Errorf("engine indices start with 1, not 0")
+		regErr := RegistrationError{
+			index: index,
+			value: fmt.Errorf("engine indices start with 1, not 0"),
+		}
+		registration.err <- regErr
 		return
 	}
 
@@ -71,6 +85,10 @@ func handleRegistryRequestMessage(client MQTT.Client, msg MQTT.Message) {
 		registration.request <- -index
 
 	default:
-		registration.err <- fmt.Errorf("wrong registration request command: allowed are register/deregister")
+		regErr := RegistrationError{
+			index: index,
+			value: fmt.Errorf("wrong registration request command: allowed are register/deregister"),
+		}
+		registration.err <- regErr
 	}
 }

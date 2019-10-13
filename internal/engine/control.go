@@ -126,11 +126,18 @@ func registerValueDescriptors() {
 		// TODO refactor and get from command line
 		communication.Publish(Config.ReverseCommandTopic, Config.EngineName + "-reverse-command-publisher", msg)
 
+		// TODO remove support for erasing value descriptors
+		// we can't know if there is not anyone else using the same descriptors
+		// it is not possible as long as there are any readings in the event API
+		// as we do not offer any support right now of moving these, we shouldn't remove value descriptors at all
+		// if error, do not add to list
+		// if it's a duplicate, we'll receive the ID of the value descriptor
+		// if it's created, we'll receive the ID of the value descriptor
+
+		// TODO stop cleaning this or so...
 		fmt.Println("Awaiting ID from server")
 		response := <- reverseCommandResponse.incoming
 		switch response {
-		case "duplicate":
-			fmt.Println("Value descriptor has already been registered.")
 		case "error":
 			panic("Value descriptor couldn't be created.")
 		default:
