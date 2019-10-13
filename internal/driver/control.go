@@ -22,8 +22,10 @@ type response struct {
 	Error   string `json:"error"`
 }
 
+// TODO move all this into enginecontrol
+
 func InitRegistrySubscription() {
-	BitflowDriver.lc.Debug("Subscribing to " + naming.RegistryRequest)
+	log.Debug("Subscribing to " + naming.RegistryRequest)
 	subscriber.registry = communication.Subscribe(
 		naming.Topic(-1, naming.RegistryRequest),
 		naming.Subscriber(-1, naming.RegistryRequest),
@@ -32,7 +34,7 @@ func InitRegistrySubscription() {
 
 // per device subscription for sink of engine
 func InitSinkSubscription(index int64, events chan models.Event) {
-	BitflowDriver.lc.Debug("Subscribing to " + naming.Sink + " of " + naming.Name(index))
+	log.Debug("Subscribing to " + naming.Sink + " of " + naming.Name(index))
 	go handleSinkEvent(index, events)
 	communication.Subscribe(
 		naming.Topic(index, naming.Sink),
@@ -44,7 +46,7 @@ func InitSinkSubscription(index int64, events chan models.Event) {
 			if err == nil {
 				events <- event
 			} else {
-				BitflowDriver.lc.Debug("Ignoring message: EdgeX Event JSON data can't be unmarshalled.")
+				log.Debug("Ignoring message: EdgeX Event JSON data can't be unmarshalled.")
 			}
 		})
 }
@@ -55,15 +57,15 @@ func handleSinkEvent(index int64, events chan models.Event) {
 		_, err := clients.PostJsonRequest(url, event, context.TODO())
 		if err != nil {
 			formatted := fmt.Sprintf("couldn't send event to core data: %v", err)
-			BitflowDriver.lc.Debug(formatted)
+			log.Debug(formatted)
 		}
 	}
-	BitflowDriver.lc.Info("event channel of " + naming.Name(index) + " is closed")
+	log.Info("event channel of " + naming.Name(index) + " is closed")
 }
 
 // per device subscription for reverse command of engine
 func InitReverseCommandSubscription(index int64, reverseCommands chan reverseCommandRequest) {
-	BitflowDriver.lc.Debug("Subscribing to " + naming.ReverseCommand + " of " + naming.Name(index))
+	log.Debug("Subscribing to " + naming.ReverseCommand + " of " + naming.Name(index))
 	go handleReverseCommand(index, reverseCommands)
 	communication.Subscribe(
 		naming.Topic(index, naming.ReverseCommand),
@@ -73,7 +75,7 @@ func InitReverseCommandSubscription(index int64, reverseCommands chan reverseCom
 			err := json.Unmarshal(msg.Payload(), &reverseCommandRequest)
 			if err != nil {
 				formatted := fmt.Sprintf("couldn't unmarshal reverse command request: %v", err)
-				BitflowDriver.lc.Debug(formatted)
+				log.Debug(formatted)
 			}
 			reverseCommands <- reverseCommandRequest
 		})
@@ -87,7 +89,7 @@ func handleReverseCommand(index int64, reverseCommands chan reverseCommandReques
 			ID, err := clients.PostJsonRequest(url, vd, context.TODO())
 			if err != nil {
 				formatted := fmt.Sprintf("couldn't register value descriptor in core data: %v", err)
-				BitflowDriver.lc.Debug(formatted)
+				log.Debug(formatted)
 			}
 			topic := naming.Topic(index, naming.ReverseCommandResponse)
 			clientID := naming.Publisher(index, naming.ReverseCommandResponse)
@@ -103,11 +105,11 @@ func handleReverseCommand(index int64, reverseCommands chan reverseCommandReques
 			err := clients.DeleteRequest(url, context.TODO())
 			if err != nil {
 				formatted := fmt.Sprintf("couldn't clean value descriptor from core data: %v", err)
-				BitflowDriver.lc.Debug(formatted)
+				log.Debug(formatted)
 			}
 		}
 	}
-	BitflowDriver.lc.Info("reverse command channel of " + naming.Name(index) + " is closed")
+	log.Info("reverse command channel of " + naming.Name(index) + " is closed")
 }
 
 func handleRegistryRequest() {
@@ -120,10 +122,10 @@ func handleRegistryRequest() {
 
 			if request > 0 {
 				index = request
-				err = register(index)
+				err = registry.Register(index)
 			} else {
 				index = -request
-				err = deregister(index)
+				err = registry.Deregister(index)
 			}
 
 			if err == nil {
@@ -148,10 +150,10 @@ func handleRegistryRequest() {
 
 			payload, err := json.Marshal(rsp)
 			if err != nil {
-				BitflowDriver.lc.Error(err.Error())
+				log.Error(err.Error())
 			}
 			msg := string(payload)
-			BitflowDriver.lc.Error(msg)
+			log.Error(msg)
 			// TODO send this back to server
 		}
 	}

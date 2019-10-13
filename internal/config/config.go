@@ -11,22 +11,21 @@ package config
 
 import (
 	"fmt"
+	"github.com/datenente/device-bitflow/internal/naming"
 	"reflect"
 	"strconv"
 
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
 )
 
-const (
-	Protocol = "mqtt"
-	DockerTLSVerify = "DOCKER_TLS_VERIFY"
-	DockerHost = "DOCKER_HOST"
-	DockerCertPath = "DOCKER_CERT_PATH"
-	DockerMachineName = "DOCKER_MACHINE_NAME"
-	DockerEngineImage = "datenente/docker-device-bitflow-engine:1.0.0"
-)
-
 var (
+	Broker = struct {
+		Name string
+		Schema string
+		Host string
+		Port int
+	}{}
+
 	URL = struct {
 		CoreData string
 		CoreMetadata string
@@ -99,9 +98,9 @@ func CreateDriverConfig(configMap map[string]string) (*Configuration, error) {
 // CreateConnectionInfo use to load MQTT connectionInfo for read and write command
 func CreateConnectionInfo(protocols map[string]models.ProtocolProperties) (*ConnectionInfo, error) {
 	info := new(ConnectionInfo)
-	protocol, ok := protocols[Protocol]
+	protocol, ok := protocols[naming.Protocol]
 	if !ok {
-		return info, fmt.Errorf("unable to load config, '%s' not exist", Protocol)
+		return info, fmt.Errorf("unable to load config, '%s' not exist", naming.Protocol)
 	}
 
 	err := load(protocol, info)

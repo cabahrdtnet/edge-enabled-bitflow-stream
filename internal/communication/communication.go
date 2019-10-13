@@ -19,7 +19,7 @@ func Publish(topic string, clientID string, msg string) {
 
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+		panic(token.Error().Error() + "[[Broker:" + Broker + "]]")
 	}
 	qos := 0
 	token := client.Publish(topic, byte(qos), false, msg)
@@ -40,7 +40,7 @@ func Subscribe(topic string, clientID string, handler mqtt.MessageHandler) mqtt.
 
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+		panic(token.Error().Error())
 	}
 
 	qos := 0

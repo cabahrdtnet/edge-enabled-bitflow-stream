@@ -15,12 +15,12 @@ import (
 	"fmt"
 	"github.com/datenente/device-bitflow/internal/communication"
 	conf "github.com/datenente/device-bitflow/internal/config"
-	"github.com/datenente/device-bitflow/internal/models"
 	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/datenente/device-bitflow/internal/objects"
 	"github.com/edgexfoundry/device-sdk-go"
 	"os"
+	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	dsModels "github.com/edgexfoundry/device-sdk-go/pkg/models"
@@ -29,15 +29,14 @@ import (
 )
 
 var (
-	BitflowDriver *Driver
+	log logger.LoggingClient
+	registry objects.Registry
 )
 
 type Driver struct {
 	lc      logger.LoggingClient
 	asyncCh chan<- *dsModels.AsyncValues
-	engines map[string]models.Engine
 	config  *conf.Configuration
-	mutex   sync.RWMutex
 	// see [@GopherCon2017Lightning]
 }
 
@@ -46,10 +45,10 @@ type Driver struct {
 func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.AsyncValues) error {
 	s.lc = lc
 	s.asyncCh = asyncCh
-	s.engines = make(map[string]models.Engine)
-	BitflowDriver = s
+	log = lc
 
-	err := initEngineRegistry()
+	registry := objects.Registry{}
+	err := registry.Init()
 	if err != nil {
 		panic(fmt.Errorf("could not init registry: %v", err))
 	}
@@ -60,12 +59,14 @@ func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.As
 	}
 	s.config = config
 
+	// set URLs of other microservices bundled with EdgeX
 	conf.URL.CoreData = s.config.CoreDataSchema + "://" + s.config.CoreDataHost + ":" + s.config.CoreDataPort
 	conf.URL.CoreMetadata = s.config.CoreMetadataSchema + "://" + s.config.CoreMetadataHost + ":" + s.config.CoreMetadataPort
 	conf.URL.CoreCommand = s.config.CoreCommandSchema + "://" + s.config.CoreCommandHost + ":" + s.config.CoreCommandPort
 	conf.URL.ExportClient = s.config.ExportClientSchema + "://" + s.config.ExportClientHost + ":" + s.config.ExportClientPort
 	conf.URL.RulesEngine = s.config.RulesEngineSchema + "://" + s.config.RulesEngineHost + ":" + s.config.RulesEnginePort
 
+	// set local and remote docker machine
 	conf.Docker.LocalDockerTLSVerify = s.config.LocalDockerTLSVerify
 	conf.Docker.LocalDockerHost = s.config.LocalDockerHost
 	conf.Docker.LocalDockerCertPath = s.config.LocalDockerCertPath
@@ -74,6 +75,16 @@ func (s *Driver) Initialize(lc logger.LoggingClient, asyncCh chan<- *dsModels.As
 	conf.Docker.RemoteDockerHost = s.config.RemoteDockerHost
 	conf.Docker.RemoteDockerCertPath = s.config.RemoteDockerCertPath
 	conf.Docker.RemoteDockerMachineName = s.config.RemoteDockerMachineName
+
+	// set broker config
+	brokerPort64, err := strconv.ParseInt(s.config.BrokerPort, 10, 64)
+	if err != nil {
+		panic(fmt.Errorf("couldn't parse broker port in because of: %v", err))
+	}
+	conf.Broker.Name = "MqttBroker"
+	conf.Broker.Schema = s.config.BrokerSchema
+	conf.Broker.Host = s.config.BrokerSchema
+	conf.Broker.Port = int(brokerPort64)
 
 	communication.Broker = s.config.BrokerSchema + "://" + s.config.BrokerHost + ":" + s.config.BrokerPort
 
@@ -142,20 +153,6 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		return err
 	}
 
-	defer func() {
-		BitflowDriver.mutex.RLock()
-		BitflowDriver.mutex.RUnlock()
-
-		engine, exists := s.engines[naming.Name(index)]
-		format := ""
-		if exists {
-			format = fmt.Sprintf("%v", engine)
-		} else {
-			format = fmt.Sprintf("engine does not exist")
-		}
-		s.lc.Info(format)
-	}()
-
 	command := "nop"
 	if reqs[0].DeviceResourceName == "action" {
 		command = "control"
@@ -188,7 +185,15 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		}
 
 		if action == "start" {
-			go startEngine(deviceName)
+			engine, err := registry.Get(deviceName)
+			if err != nil {
+				return fmt.Errorf("couldn't get engine in HandleWriteCommands: %v", err)
+			}
+
+			err = engine.Start()
+			if err != nil {
+				return fmt.Errorf("couldn't start engine in HandleWriteCommands: %v", err)
+			}
 			return nil
 		}
 
@@ -206,11 +211,11 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 			return err
 		}
 
-		template := models.Engine{
+		template := objects.Engine{
 			Script: contents,
 		}
 
-		err = update(index, template)
+		err = registry.Update(index, template)
 		if err != nil {
 			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err
@@ -253,12 +258,12 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		inputDeviceNames := strings.Split(strings.TrimSpace(devices), ",")
 		inputValueDescriptorNames := strings.Split(strings.TrimSpace(valueDescriptors), ",")
 
-		template := models.Engine{
+		template := objects.Engine{
 			InputDeviceNames:          inputDeviceNames,
 			InputValueDescriptorNames: inputValueDescriptorNames,
 		}
 
-		err = update(index, template)
+		err = registry.Update(index, template)
 		if err != nil {
 			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err
@@ -342,7 +347,7 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 		operator            := resources[4].value
 		rightOperand        := resources[5].value
 
-		actuation := models.Actuation{
+		actuation := objects.Actuation{
 			DeviceName:   actuationDeviceName,
 			CommandName:  commandName,
 			CommandBody:  commandBody,
@@ -351,11 +356,11 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 			RightOperand: rightOperand,
 		}
 
-		template := models.Engine{
+		template := objects.Engine{
 			Actuation: actuation,
 		}
 
-		err = update(index, template)
+		err = registry.Update(index, template)
 		if err != nil {
 			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err
@@ -370,11 +375,11 @@ func (s *Driver) HandleWriteCommands(deviceName string, protocols map[string]con
 			return err
 		}
 
-		template := models.Engine{
+		template := objects.Engine{
 			OffloadCondition: offloadCondition,
 		}
 
-		err = update(index, template)
+		err = registry.Update(index, template)
 		if err != nil {
 			err = fmt.Errorf("couldn't update %s with template %v", deviceName, template)
 			return err

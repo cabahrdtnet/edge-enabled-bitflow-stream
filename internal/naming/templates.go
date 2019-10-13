@@ -6,21 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	DeviceService = "device-bitflow"
-	DeviceProfile = "Bitflow-Script-Execution-Engine"
-	DefaultEngineName = "engine"
-
-	Bitflow          = "bitflow"
-	Command          = "command"
-	Source           = "source"
-	Sink             = "sink"
-	RegistryRequest  = "registry-request"
-	RegistryResponse = "registry-response"
-	ReverseCommand   = "reverse-command"
-	ReverseCommandResponse = "reverse-command-response"
-)
-
 // TODO unit test for this shit
 // template for bitflow engine name
 func Name(index int64) string {
@@ -70,7 +55,7 @@ func Publisher(index int64, topicStub string) string {
 
 // template for bitflow engine subscriber string
 func Subscriber(index int64, topicStub string) string {
-	return Role(index, topicStub, "publisher")
+	return Role(index, topicStub, "subscriber")
 }
 
 // extract index from arbitrary strings that are splittable by separator
