@@ -107,7 +107,7 @@ func registerValueDescriptors() {
 
 	for _, vd := range vds {
 		reverseCommand := struct {
-			Command string                  `json:"command"`
+			Command string                    `json:"command"`
 			Payload contract.ValueDescriptor  `json:"payload"`
 		}{
 			"register_value_descriptor",
@@ -191,6 +191,7 @@ func cleanUpValueDescriptors() {
 
 func handleCommand() {
 	for msg := range commands.incoming {
+		fmt.Printf("%s::%d\n", msg, len(msg))
 		switch msg {
 		case "shutdown":
 			fmt.Println("Closing channels...")
@@ -200,15 +201,15 @@ func handleCommand() {
 			communication.Disconnect(subscriber.command)
 			communication.Disconnect(subscriber.reverseCommand)
 
-		case "deregister":
-			fmt.Println("Closing channels...")
-			close(events.incoming)
-			close(commands.incoming)
-			communication.Disconnect(subscriber.event)
-			communication.Disconnect(subscriber.command)
-			cleanUpValueDescriptors()
-			communication.Disconnect(subscriber.reverseCommand)
-			fmt.Println("Channels closed and deregistered value descriptors. Shutting down now.")
+		//case "deregister":
+		//	fmt.Println("Closing channels...")
+		//	close(events.incoming)
+		//	close(commands.incoming)
+		//	communication.Disconnect(subscriber.event)
+		//	communication.Disconnect(subscriber.command)
+		//	cleanUpValueDescriptors()
+		//	communication.Disconnect(subscriber.reverseCommand)
+		//	fmt.Println("Channels closed and deregistered value descriptors. Shutting down now.")
 
 		default:
 			fmt.Println("Ignoring unknown command.")

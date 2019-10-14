@@ -116,7 +116,10 @@ func (e *Engine) register() error {
 	return nil
 }
 
-// remove rule and export client registration and wait for value descriptor deregistration
+// remove rule and export client registration but ignore value descriptors
+// as a) it is unclear if other devices are also using these value descriptors
+// and b) readings are never erased from by device-bitflow, so there will always be data integrity
+//        issues when attempting to erase a value descriptor
 func (e *Engine) deregister() error {
 	// remove rule associated with engine
 	err := e.Rule.Remove()
@@ -132,14 +135,13 @@ func (e *Engine) deregister() error {
 	}
 
 	// instruct engine to deregister value descriptors
-	deregister := "deregister"
-	communication.Publish(
-		naming.Topic(e.Index, naming.Command),
-		naming.Publisher(e.Index, naming.Command),
-		deregister)
+	//deregister := "deregister"
+	//communication.Publish(
+	//	naming.Topic(e.Index, naming.Command),
+	//	naming.Publisher(e.Index, naming.Command),
+	//	deregister)
 
 	// wait until value descriptors are deregistered
-	<-e.Communication.ValueDescriptorsCleaned
 
 	return nil
 }

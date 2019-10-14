@@ -12,8 +12,6 @@ type response struct {
 	Error   string `json:"error"`
 }
 
-// TODO move all this into enginecontrol
-
 func InitRegistrySubscription() {
 	config.Log.Debug("Subscribing to " + naming.RegistryRequest)
 	subscriber.registry = communication.Subscribe(
