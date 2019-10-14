@@ -5,6 +5,7 @@ import (
 	"github.com/datenente/device-bitflow/internal/config"
 	"github.com/datenente/device-bitflow/internal/naming"
 	sdk "github.com/edgexfoundry/device-sdk-go"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/types"
 	contract "github.com/edgexfoundry/go-mod-core-contracts/models"
 	"sync"
 )
@@ -142,25 +143,26 @@ func (r *Registry) Deregister(index int64) error {
 		return fmt.Errorf("couldn't deregister %s couldn't be retrieved: %v", name, err)
 	}
 
-	// check if engine still runs, if so stop
-	// TODO this is wrong
-	if engine.HasBooted() {
-		err = engine.stop()
-		if err != nil {
-			return fmt.Errorf("couldn't deregister %s, as %s couldn't be stopped: %v", name, name, err)
-		}
-	}
-
-	// remove device associated with engine
-	err = r.removeDevice(index)
-	if err != nil {
-		return fmt.Errorf("couldn't deregister %s as device couldn't be removed: %v", name, err)
+	if ! engine.HasBooted() {
+		return fmt.Errorf("boot engine %s for proper deregistering", name)
 	}
 
 	// remove rule and registration in engine
 	err = engine.deregister()
 	if err != nil {
 		return fmt.Errorf("couldn't deregister %s as engine couldn't deregister: %v", name, err)
+	}
+
+	// stop engine
+	err = engine.stop()
+	if err != nil {
+		return fmt.Errorf("couldn't deregister %s as engine couldn't be stopped: %v", name, err)
+	}
+
+	// remove device associated with engine
+	err = r.removeDevice(index)
+	if err != nil {
+		return fmt.Errorf("couldn't deregister %s as device couldn't be removed: %v", name, err)
 	}
 
 	// finally delete engine from registry
@@ -206,8 +208,6 @@ func (r *Registry) addIndexedDefaultEngine(index int64) error {
 				Index:                    index,
 				SinkSubscriber:           nil,
 				ReverseCommandSubscriber: nil,
-				Events:                   make(chan contract.Event),
-				ReverseCommandRequests:   make(chan reverseCommandRequest),
 			},
 			Rule:          Rule{},
 			OffloadTarget: naming.Local,
@@ -274,12 +274,14 @@ func (r *Registry) addDevice(index int64) error {
 		},
 		AutoEvents:      nil,
 	}
-
 	_, err := sdk.RunningService().AddDevice(dev)
-	if err != nil {
+
+	// TODO make explicit: silently ignoring duplicates
+	if err != nil && err.(*types.ErrServiceClient).StatusCode == 409 {
+		return nil
+	} else {
 		return fmt.Errorf("couldn't add device to EdgeX: %v", err)
 	}
-	return err
 }
 
 // remove engine's associated device

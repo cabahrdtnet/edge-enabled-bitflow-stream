@@ -64,11 +64,7 @@ func (e *Engine) stop() error {
 		shutdown)
 
 	// stop subscribing to engine's commands and events
-	// TODO what's wrong here?
-	//e.Communication.Teardown()
-
-	// value descriptors are cleaned up in the background on behalf of device in
-	// handleReverseCommand, when engine shuts down
+	e.Communication.Teardown()
 
 	// TODO create graphic for MQTT hierarchy, whos's publishing what to whom and why
 	// TODO explain MQTT hierarchy
@@ -115,10 +111,12 @@ func (e *Engine) register() error {
 	if err != nil {
 		return fmt.Errorf("can't register engine %s, rule couldn't be added to rules engine", e.Name)
 	}
+
+	// value descriptors init are automatically created by engine and sent to registry for registration
 	return nil
 }
 
-// remove rule and export client registration
+// remove rule and export client registration and wait for value descriptor deregistration
 func (e *Engine) deregister() error {
 	// remove rule associated with engine
 	err := e.Rule.Remove()
@@ -132,6 +130,16 @@ func (e *Engine) deregister() error {
 	if err != nil {
 		return fmt.Errorf("couldn't remove export client registration for engine %s: %v", e.Name, err)
 	}
+
+	// instruct engine to deregister value descriptors
+	deregister := "deregister"
+	communication.Publish(
+		naming.Topic(e.Index, naming.Command),
+		naming.Publisher(e.Index, naming.Command),
+		deregister)
+
+	// wait until value descriptors are deregistered
+	<-e.Communication.ValueDescriptorsCleaned
 
 	return nil
 }

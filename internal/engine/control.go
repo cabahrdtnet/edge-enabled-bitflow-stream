@@ -13,9 +13,11 @@ var (
 	Config  = configuration{}
 
 	valueDescriptors = struct {
-		IDs []string                // IDs of created Value Descriptors in EdgeX
-		Initialized sync.WaitGroup  // synced access of receiving events after initializing value descriptors
+		IDs   []string       // ID of created Value Descriptors in EdgeX
+		Names  []string       // Name of created Value Descriptors in EdgeX
+		Initialized sync.WaitGroup // synced access of receiving events after initializing value descriptors
 	}{
+		[]string{},
 		[]string{},
 		sync.WaitGroup{}}
 )
@@ -45,10 +47,6 @@ func Configure() {
 
 	go handleCommand()
 	go handlePublicationValue()
-}
-
-func CleanUp() {
-	cleanUpValueDescriptors()
 }
 
 // initializes one-off subscription for first event
@@ -144,6 +142,7 @@ func registerValueDescriptors() {
 			// response is ID of valueDescriptor
 			fmt.Println("Adding value descriptor ID to value descriptors.")
 			valueDescriptors.IDs = append(valueDescriptors.IDs, response)
+			valueDescriptors.Names = append(valueDescriptors.Names, vd.Name)
 		}
 	}
 
@@ -151,32 +150,47 @@ func registerValueDescriptors() {
 }
 
 func cleanUpValueDescriptors() {
-	for _, ID := range valueDescriptors.IDs {
+	for _, name := range valueDescriptors.Names {
 		reverseCommand := struct {
 			Command string	`json:"command"`
 			Payload contract.ValueDescriptor	`json:"payload"`
 		}{
 			"clean_value_descriptor",
 			contract.ValueDescriptor{
-				Id: ID,
+				Name: name,
 			},
 		}
 
 		b, err := json.Marshal(reverseCommand)
 		msg := string(b)
 		if err != nil {
-			fmt.Println("Couldn't marshal reverse command message:", msg)
+			fmt.Println("Couldn't marshal clean_value_descriptor reverse command message:", msg)
 		}
 		communication.Publish(Config.ReverseCommandTopic,
 			Config.EngineName + "-reverse-command-publisher",
 			msg)
 	}
+	reverseCommand := struct {
+		Command string	                 `json:"command"`
+		Payload contract.ValueDescriptor `json:"payload"`
+	}{
+		"finalize_clean_value_descriptor",
+		contract.ValueDescriptor{},
+	}
+
+	b, err := json.Marshal(reverseCommand)
+	msg := string(b)
+	if err != nil {
+		fmt.Println("Couldn't marshal finalize reverse command message:", msg)
+	}
+	communication.Publish(Config.ReverseCommandTopic,
+		Config.EngineName + "-reverse-command-publisher",
+		msg)
 }
 
 
 func handleCommand() {
 	for msg := range commands.incoming {
-		// TODO this channel should contain custom JSON commands data
 		switch msg {
 		case "shutdown":
 			fmt.Println("Closing channels...")
@@ -185,7 +199,17 @@ func handleCommand() {
 			communication.Disconnect(subscriber.event)
 			communication.Disconnect(subscriber.command)
 			communication.Disconnect(subscriber.reverseCommand)
-			fmt.Println("Channels closed. Shutting down now.")
+
+		case "deregister":
+			fmt.Println("Closing channels...")
+			close(events.incoming)
+			close(commands.incoming)
+			communication.Disconnect(subscriber.event)
+			communication.Disconnect(subscriber.command)
+			cleanUpValueDescriptors()
+			communication.Disconnect(subscriber.reverseCommand)
+			fmt.Println("Channels closed and deregistered value descriptors. Shutting down now.")
+
 		default:
 			fmt.Println("Ignoring unknown command.")
 		}

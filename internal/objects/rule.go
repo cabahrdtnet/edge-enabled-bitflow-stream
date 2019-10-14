@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/datenente/device-bitflow/internal/config"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients"
+	"github.com/edgexfoundry/go-mod-core-contracts/clients/types"
 )
 
 type Rule struct {
@@ -36,7 +37,8 @@ type Action struct {
 func (r *Rule) Add() error {
 	url := config.URL.RulesEngine + clients.ApiBase + "/rule"
 	_, err := clients.PostJsonRequest(url, r, context.TODO())
-	if err != nil {
+	// TODO make explicit: silently ignore duplicate rules
+	if err != nil && err.(*types.ErrServiceClient).StatusCode != 409 {
 		return fmt.Errorf("couldn't send rule to rules engine: %v", err)
 	}
 	return nil
@@ -44,6 +46,9 @@ func (r *Rule) Add() error {
 
 // remove rule from rules engine
 func (r *Rule) Remove() error {
+	if r.Name == "" {
+		return nil
+	}
 	url := config.URL.RulesEngine + clients.ApiBase + "/rule/name/" + r.Name
 	err := clients.DeleteRequest(url, context.TODO())
 	if err != nil {

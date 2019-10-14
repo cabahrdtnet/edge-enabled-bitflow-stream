@@ -14,11 +14,12 @@ import (
 )
 
 type EngineCommunication struct {
-	Index 					  int64       // communication should belong to engine with the same index
-	SinkSubscriber            mqtt.Client // mqtt client that connects from events of engine, e.g. "bitflow/engine/1/sink"
-	ReverseCommandSubscriber  mqtt.Client // mqtt client that connects to reverse commands from engine, e.g. "bitflow/engine/1/reverse-command"
-	Events                    chan contract.Event
-	ReverseCommandRequests    chan reverseCommandRequest
+	Index                    int64       // communication should belong to engine with the same index
+	SinkSubscriber           mqtt.Client // mqtt client that connects from events of engine, e.g. "bitflow/engine/1/sink"
+	ReverseCommandSubscriber mqtt.Client // mqtt client that connects to reverse commands from engine, e.g. "bitflow/engine/1/reverse-command"
+	Events                   chan contract.Event
+	ReverseCommandRequests   chan reverseCommandRequest
+	ValueDescriptorsCleaned  chan bool
 }
 
 type reverseCommandRequest struct {
@@ -28,6 +29,9 @@ type reverseCommandRequest struct {
 
 // open channels and init subscriptions for engine with this EngineCommunication
 func (ec *EngineCommunication) Setup() {
+	ec.Events = make(chan contract.Event)
+	ec.ReverseCommandRequests = make(chan reverseCommandRequest)
+	ec.ValueDescriptorsCleaned = make(chan bool)
 	go ec.initEventSubscription()
 	go ec.initReverseCommandSubscription()
 	go ec.handleEvent()
@@ -40,6 +44,7 @@ func (ec *EngineCommunication) Teardown() {
 	close(ec.ReverseCommandRequests)
 	communication.Disconnect(ec.SinkSubscriber)
 	communication.Disconnect(ec.ReverseCommandSubscriber)
+	close(ec.ValueDescriptorsCleaned)
 }
 
 // init event subscription
@@ -138,6 +143,10 @@ func (ec *EngineCommunication) handleReverseCommand() {
 				config.Log.Debug(formatted)
 			}
 			continue
+		}
+
+		if rcr.Command == "finalize_clean_value_descriptor" {
+			ec.ValueDescriptorsCleaned <- true
 		}
 	}
 	config.Log.Info("reverse command channel of " + naming.Name(ec.Index) + " is closed")

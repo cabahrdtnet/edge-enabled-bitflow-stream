@@ -9,7 +9,7 @@ var (
 	DefaultInputDeviceNames = []string{}
 	DefaultInputValueDescriptorNames = []string{}
 	DefaultActuation = Actuation{}
-	DefaultOffloadCondition = `func offload() string { return "local" })`
+	DefaultOffloadCondition = `package main ; import "fmt" ; func main() { fmt.Print("local") }`
 )
 
 type EngineConfiguration struct {

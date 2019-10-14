@@ -41,7 +41,11 @@ func (i *Instance) prepare() (string, error) {
 	}
 
 	// docker run config.DockerEngineImage
+	// TODO add machine name --name engine-1 instead of random shit
+	// therefore it is sufficient to just save the index to completely identify
+	// then you just need to start the engine and you don't have to run it anymore! well you still have to..
 	dockerArgs := []string{"run", naming.DockerEngineImage}
+	//dockerArgs := []string{"run", "--name", i.Engine.Name, naming.DockerEngineImage}
 	instanceArgs := i.args()
 	args := append(dockerArgs, instanceArgs...)
 	i.docker = exec.Command(naming.DockerCommand, args...)

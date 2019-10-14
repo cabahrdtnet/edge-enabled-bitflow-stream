@@ -25,6 +25,5 @@ func main() {
 
 	engine.Configure()
 	exitCode := engine.Run()
-	engine.CleanUp()
 	os.Exit(exitCode)
 }
