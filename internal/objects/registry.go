@@ -86,6 +86,10 @@ func (r *Registry) Stop(index int64) error {
 }
 
 // TODO add bitflow arguments
+
+// TODO add CLI interface, really really fast and easy
+// TODO write test (no just don't, you tested manually, around 10-20h)
+// describe how you have done this
 // TODO events like this
 // {"device":"countcamera1","origin":1471806386920, "readings":[{"name":"sausagecount","value":"10","origin":1471806386920},{"name":"caninecount","value":"0","origin":1471806386920}]}
 // when engine has subscribed
