@@ -82,9 +82,14 @@ func (e *Engine) inferRule() error {
 	return nil
 }
 
-// check if engine with this configuration can be started
+// check if engine can be started
+// it can't started if it has been booted and or if it's misconfigured
 func (e *Engine) startable() bool {
 	if e.Configuration.InputDeviceNamesUnset() && e.Configuration.InputValueDescriptorNamesUnset() {
+		return false
+	}
+
+	if e.booted {
 		return false
 	}
 

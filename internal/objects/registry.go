@@ -43,8 +43,12 @@ func (r *Registry) Start(index int64) error {
 		return fmt.Errorf("couldn't start engine as engine couldn't register: %v", err)
 	}
 
+	if engine.booted {
+		return fmt.Errorf("couldn't start engine that has already started")
+	}
+
 	if ! engine.startable() {
-		return fmt.Errorf("couldn't start engine as engine isn't startable")
+		return fmt.Errorf("couldn't start engine as engine is misconfigured")
 	}
 
 	err = engine.start()
@@ -55,15 +59,22 @@ func (r *Registry) Start(index int64) error {
 	return nil
 }
 
+// FIXME for some reason value descriptors are ignored
+
 // TODO write prose about this
 // when what is registered and what happens when engine is started and stopped
 // device, rule, registration, value descriptors
+// events like with duplicate value descriptors are illegal
 
 // stop engine
 func (r *Registry) Stop(index int64) error {
 	engine, err := r.get(index)
 	if err != nil {
 		return fmt.Errorf("couldn't stop engine: %v", err)
+	}
+
+	if ! engine.booted {
+		return fmt.Errorf("couldn't stop machine that has not been started")
 	}
 
 	err = engine.stop()
@@ -74,6 +85,12 @@ func (r *Registry) Stop(index int64) error {
 	return nil
 }
 
+// TODO add bitflow arguments
+// TODO events like this
+// {"device":"countcamera1","origin":1471806386920, "readings":[{"name":"sausagecount","value":"10","origin":1471806386920},{"name":"caninecount","value":"0","origin":1471806386920}]}
+// when engine has subscribed
+// http PUT http://localhost:48082/api/v1/device/name/engine-4/command/source devices="countcamera1,countcamera2" value_descriptors="humancount,caninecount"
+// fails because the reading is incomplete
 // set engine identified by index with template engine
 func (r *Registry) Update(index int64, template Engine) error {
 	name := naming.Name(index)

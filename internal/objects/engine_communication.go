@@ -121,7 +121,9 @@ func (ec *EngineCommunication) handleReverseCommand() {
 					msg = "error"
 				}
 				msg = alreadyRegisteredValueDescriptor.Id
-			} else {
+			}
+
+			if err != nil && err.(*types.ErrServiceClient).StatusCode != 409 {
 				formatted := fmt.Sprintf("couldn't register value descriptor: %v", err)
 				config.Log.Debug(formatted)
 				msg = "error"
