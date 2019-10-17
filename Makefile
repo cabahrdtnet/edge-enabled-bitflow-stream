@@ -25,7 +25,7 @@ build: $(SERVICE) $(ENGINE)
 build-engine: $(ENGINE)
 	$(GO) install -tags=safe
 
-build-service: $(ENGINE)
+build-service: $(SERVICE)
 	$(GO) install -tags=safe
 
 cmd/device-bitflow/device-bitflow:
