@@ -3,13 +3,13 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/communication"
+	"github.com/datenente/device-bitflow-stream/internal/communication"
 	contract "github.com/edgexfoundry/go-mod-core-contracts/models"
 	"sync"
 )
 
 var (
-	// these values are set in commands/device-bitflow/engine/main.go
+	// these values are set in commands/device-bitflow-stream/engine/main.go
 	Config  = configuration{}
 
 	valueDescriptors = struct {

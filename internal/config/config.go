@@ -11,7 +11,7 @@ package config
 
 import (
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/datenente/device-bitflow-stream/internal/naming"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients/logger"
 	"reflect"
 	"strconv"

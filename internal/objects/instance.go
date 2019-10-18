@@ -2,8 +2,8 @@ package objects
 
 import (
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/communication"
-	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/datenente/device-bitflow-stream/internal/communication"
+	"github.com/datenente/device-bitflow-stream/internal/naming"
 	"os/exec"
 )
 

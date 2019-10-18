@@ -9,7 +9,7 @@
 FROM golang:1.13-alpine AS builder
 
 ENV GO111MODULE=on
-WORKDIR /go/src/github.com/datenente/device-bitflow
+WORKDIR /go/src/github.com/datenente/device-bitflow-stream
 
 RUN sed -e 's/dl-cdn[.]alpinelinux.org/nl.alpinelinux.org/g' -i~ /etc/apk/repositories
 
@@ -63,7 +63,7 @@ ENV APP_PORT=49995
 EXPOSE $APP_PORT
 
 WORKDIR /
-COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/engine/engine /usr/local/bin/engine
+COPY --from=builder /go/src/github.com/datenente/device-bitflow-stream/cmd/engine/engine /usr/local/bin/engine
 COPY --from=builder /go/src/github.com/bitflow-stream/go-bitflow/cmd/bitflow-pipeline/bitflow-pipeline /usr/local/bin/bitflow-pipeline
 
 ENTRYPOINT [ "/usr/local/bin/engine" ]

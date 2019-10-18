@@ -10,10 +10,7 @@
 FROM golang:1.13-alpine AS builder
 
 ENV GO111MODULE=on
-WORKDIR /go/src/github.com/datenente/device-bitflow
-
-LABEL license='SPDX-License-Identifier: MIT' \
-  copyright='Copyright (c) 2019: Christian Alexander Bahrdt'
+WORKDIR /go/src/github.com/datenente/device-bitflow-stream
 
 RUN sed -e 's/dl-cdn[.]alpinelinux.org/nl.alpinelinux.org/g' -i~ /etc/apk/repositories
 
@@ -29,17 +26,17 @@ COPY . .
 RUN make build-service
 
 # Next image - Copy built Go binary into new workspace
-FROM scratch
-
-LABEL license='SPDX-License-Identifier: MIT' \
-  copyright='Copyright (c) 2019: Christian Alexander Bahrdt'
+FROM golang:1.13-alpine 
+# FROM scratch
+RUN apk update && apk add docker
 
 ENV APP_PORT=49995
 #expose command data port
 EXPOSE $APP_PORT
 
 WORKDIR /
-COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/device-bitflow/device-bitflow /usr/local/bin/device-bitflow
-COPY --from=builder /go/src/github.com/datenente/device-bitflow/cmd/device-bitflow/res/docker/configuration.toml /res/docker/configuration.toml
+COPY --from=builder /go/src/github.com/datenente/device-bitflow-stream/cmd/device-bitflow-stream/device-bitflow-stream /usr/local/bin/device-bitflow-stream
+COPY --from=builder /go/src/github.com/datenente/device-bitflow-stream/cmd/device-bitflow-stream/res/docker/configuration.toml /res/docker/configuration.toml
 
-ENTRYPOINT [ "/usr/local/bin/device-bitflow","--profile=docker","--confdir=/res"]
+ENTRYPOINT [ "/usr/local/bin/device-bitflow-stream","--profile=docker","--confdir=/res"]
+#CMD [ "/usr/local/bin/device-bitflow-stream","--profile=docker","--confdir=/res"]

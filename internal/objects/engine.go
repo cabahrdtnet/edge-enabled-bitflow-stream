@@ -2,8 +2,8 @@ package objects
 
 import (
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/communication"
-	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/datenente/device-bitflow-stream/internal/communication"
+	"github.com/datenente/device-bitflow-stream/internal/naming"
 )
 
 type Engine struct {
@@ -123,7 +123,7 @@ func (e *Engine) register() error {
 
 // remove rule and export client registration but ignore value descriptors
 // as a) it is unclear if other devices are also using these value descriptors
-// and b) readings are never erased from by device-bitflow, so there will always be data integrity
+// and b) readings are never erased from by device-bitflow-stream, so there will always be data integrity
 //        issues when attempting to erase a value descriptor
 func (e *Engine) deregister() error {
 	// remove rule associated with engine

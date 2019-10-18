@@ -2,8 +2,8 @@ package objects
 
 import (
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/config"
-	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/datenente/device-bitflow-stream/internal/config"
+	"github.com/datenente/device-bitflow-stream/internal/naming"
 	sdk "github.com/edgexfoundry/device-sdk-go"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients/types"
 	contract "github.com/edgexfoundry/go-mod-core-contracts/models"
@@ -281,7 +281,7 @@ func (r *Registry) addDevice(index int64) error {
 		LastReported:  0,
 		Labels:        []string{
 			"bitflow-script-execution-engine",
-			"created-by-device-bitflow",
+			"created-by-device-bitflow-stream",
 		},
 		Location:        nil,
 		Service:         contract.DeviceService{

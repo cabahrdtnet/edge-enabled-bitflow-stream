@@ -1,4 +1,4 @@
-module github.com/datenente/device-bitflow
+module github.com/datenente/device-bitflow-stream
 
 go 1.13
 

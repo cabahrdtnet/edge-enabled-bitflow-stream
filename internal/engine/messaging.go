@@ -3,7 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/communication"
+	"github.com/datenente/device-bitflow-stream/internal/communication"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/edgexfoundry/go-mod-core-contracts/models"
 )

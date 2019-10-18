@@ -2,9 +2,9 @@ package driver
 
 import (
 	"encoding/json"
-	"github.com/datenente/device-bitflow/internal/communication"
-	"github.com/datenente/device-bitflow/internal/config"
-	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/datenente/device-bitflow-stream/internal/communication"
+	"github.com/datenente/device-bitflow-stream/internal/config"
+	"github.com/datenente/device-bitflow-stream/internal/naming"
 )
 
 type response struct {

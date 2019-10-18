@@ -3,8 +3,8 @@ package objects
 import (
 	"context"
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/config"
-	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/datenente/device-bitflow-stream/internal/config"
+	"github.com/datenente/device-bitflow-stream/internal/naming"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients"
 	"github.com/edgexfoundry/go-mod-core-contracts/clients/types"
 	"github.com/edgexfoundry/go-mod-core-contracts/models"

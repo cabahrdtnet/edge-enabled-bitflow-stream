@@ -2,7 +2,7 @@ package driver
 
 import (
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/naming"
+	"github.com/datenente/device-bitflow-stream/internal/naming"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 )
 

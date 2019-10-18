@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/datenente/device-bitflow/internal/engine"
+	"github.com/datenente/device-bitflow-stream/internal/engine"
 	"os"
 )
 
