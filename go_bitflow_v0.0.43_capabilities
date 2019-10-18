@@ -1,0 +1,336 @@
+Processing steps:
+ - append_latency
+      Description: Append the time difference to the previous sample as a metric
+ - avg
+      Description: Add an average metric for every incoming metric. Optional parameter: duration or number of samples
+      Parameters:
+          windowDuration (duration), optional, default: 0s
+          windowSize (int), optional, default: 0
+          useCurrentTime (bool), optional, default: false
+ - block
+      Description: Block further processing of the samples until a release() with the same key is closed. Creates a new goroutine, input buffer size must be specified.
+      Parameters:
+          key (string), required
+          buf (int), required
+ - count_invalid
+      Description: When done processing, print the number of invalid metric values and samples containing such values (NaN, -/+ infinity, ...)
+ - count_tags
+      Description: When done processing, print the number of times every value of the given tag was encountered
+      Parameters:
+          tag (string), required
+ - decouple
+      Description: Start a new concurrent routine for handling samples. The parameter is the size of the FIFO-buffer for handing over the samples
+      Parameters:
+          buf (int), required. Description: The number of samples that can be buffered between the incoming goroutine, and the concurrent routine that forwards the samples
+ - do
+      Description: Execute the given expression on every sample
+      Parameters:
+          expr (string), required. Description: Allows arithmetic and boolean operations. Can also perform them on sample fields (e.g. field1 [+,-,*,/] field2).
+                                                Following additional functions are implemented: 
+                                                tag(string) string: Access tag by tag key (string). Returns tag string or empty string if key does not exist.
+                                                
+                                                has_tag(string) bool: Check existence of tag key.
+                                                
+                                                set_tag(string, string) bitflow.SampleAndHeader: Adds or replaces a tag at the current sample and returns the result.
+                                                First argument is key, second is the tag value.
+                                                
+                                                timestamp() float64: Returns the timestamp of the current sample.
+                                                
+                                                now() float64: Returns the current local system time.
+                                                
+                                                num() float64: Returns the current number of processed samples.
+                                                
+                                                str(_) string: Converts an arbitrary argument to string.
+                                                
+                                                strToFloat(string) float64: Converts a string argument to float64.
+                                                
+                                                date_str(float64) string: Converts the timestamp argument to a string representation.
+                                                
+                                                set_timestamp(float64) bitflow.SampleAndHeader: Sets the timestamp of the current sample and returns the result.
+                                                
+                                                floor(float64) float64: Applies the floor operation on the argument.
+                                                
+                                                set(string, float64, optional: bitflow.SampleAndHeader) bitflow.SampleAndHeader:
+                                                 Sets or replaces the value (2nd argument) of the sample field (1st argument).
+                                                Third argument is optional. If set, the setting is applied on the passed sample.
+                                                Otherwise it is applied on the current sample.
+                                                
+                                                get_sample_and_header(): bitflow.SampleAndHeader: Returns the current sample.
+                                                
+                                                Note that arithmetic, boolean and function expressions can be combines as long as the arguments and return types match.
+                                                Some examples: 
+                                                expr='set_tag("my_system_time", str(now()))'
+                                                expr='set_timestamp(now())'
+                                                expr='set("field3", field1 + field2)'
+                                                expr='set("field1", field1 * 10)'
+                                                expr='set("field3", field1 * 10, set("field2", now(), set_tag("new_tag", "awesome")))'
+                                                
+                                                Currently the field to value mapping is done once before each sample is processed.
+                                                Therefore, interdependent arithmetic operations produce possibly unexpected results.
+                                                Example: expr='set("field1", field1 + 10, set("field1", 10))'
+                                                The expected value for field1 would be 20.
+                                                However, the actual result would be the original value of field1 + 10 or an error if field1 does not exist in the sample.
+ - drop
+      Description: Drop all samples
+ - drop_errors
+      Description: All errors of subsequent processing steps are only logged and not forwarded to the steps before. By default, the errors are logged (can be disabled).
+      Parameters:
+          log-info (bool), optional, default: false
+          log-warn (bool), optional, default: false
+          log (bool), optional, default: false
+          log-debug (bool), optional, default: false
+ - exclude
+      Description: Match every metric with the given regex and exclude the matched metrics
+      Parameters:
+          m (string), required
+ - fill-up
+      Description: If the timestamp different between two consecutive samples is larger than the given interval, send copies of the first sample to fill the gap
+      Parameters:
+          interval (duration), required
+          step-interval (duration), optional, default: 0s
+ - filter
+      Description: Filter the samples based on a boolean expression
+      Parameters:
+          expr (string), required
+ - filter-duplicate-timestamps
+      Description: Filter samples that follow each other too closely
+      Parameters:
+          interval (duration), required
+ - graphite
+      Description: Send metrics and/or tags to the given Graphite endpoint.
+      Parameters:
+          endpoint-config (map(string)), optional, default: map[]
+          target (string), required
+          prefix (string), optional, default: 
+ - head
+      Description: Forward only a number of the first processed samples. The whole pipeline is closed afterwards, unless close=false is given.
+      Parameters:
+          num (int), required
+          close (bool), optional, default: false
+ - histogram
+      Description: When done processing, print a timeline showing a rudimentary histogram of the number of samples
+      Parameters:
+          buckets (int), optional, default: 10
+ - http
+      Description: Serve HTTP-based plots about processed metrics values to the given HTTP endpoint
+      Parameters:
+          local-static (bool), optional, default: false
+          endpoint (string), required
+          window (int), optional, default: 100
+ - include
+      Description: Match every metric with the given regex and only include the matched metrics
+      Parameters:
+          m (string), required
+ - listen_tags
+      Description: Listen for HTTP requests on the given port at /api/tag and /api/tags to configure tags
+      Parameters:
+          listen (string), required
+          default (map(string)), optional, default: map[]
+ - merge_headers
+      Description: Accept any number of changing headers and merge them into one output header when flushing the results
+ - merge_streams
+      Description: Merge multiple streams, identified by a given tag. Output samples are generated in a given interval, all incoming metrics are averaged within that window, incoming metric names are prefixes with the respective tag value.
+      Parameters:
+          tag (string), required
+          num (int), required
+          interval (duration), required
+          debug (bool), optional, default: false
+ - noop
+      Description: Pass samples through without modification
+ - opentsdb
+      Description: Send metrics and/or tags to the given OpenTSDB endpoint.
+      Parameters:
+          target (string), required
+          prefix (string), optional, default: 
+          endpoint-config (map(string)), optional, default: map[]
+ - output_files
+      Description: Output samples to multiple files, filenames are built from the given template, where placeholders like ${xxx} will be replaced with tag values
+      Parameters:
+          file (string), required
+          parallelize (int), optional, default: 0
+          endpoint-config (map(string)), optional, default: map[]
+ - parse_tags
+      Description: Append metrics based on tag values. Keys are new metric names, values are tag names
+      Parameters:
+          tags (map(string)), required
+ - pca_load_stream
+      Description: Like pca_load, but process every sample individually, instead of batching them up
+      Parameters:
+          var (float), required
+          file (string), required
+ - pick
+      Description: Forward only a percentage of samples, parameter is in the range 0..1
+      Parameters:
+          percent (float), required
+ - plot
+      Description: Plot a batch of samples to a given filename. The file ending denotes the file type
+      Parameters:
+          plot_type (string), optional, default: cluster
+          nolegend (bool), optional, default: false
+          force_scatter (bool), optional, default: true
+          xMin (float), optional, default: 0
+          xMax (float), optional, default: 0
+          yMin (float), optional, default: 0
+          color (string), optional, default: 
+          separate (bool), optional, default: false
+          force_time (bool), optional, default: true
+          yMax (float), optional, default: 0
+          file (string), required
+ - print_common_metrics
+      Description: When done processing, print the metrics that occurred in all processed headers
+ - print_header
+      Description: Print every changing header to the log
+ - print_tags
+      Description: When done processing, print every encountered value of the given tag
+      Parameters:
+          tag (string), required
+ - print_timerange
+      Description: When done processing, print the first and last encountered timestamp
+ - releaseOnClose
+      Description: When this step is closed, release all instances of block() with the same key value
+      Parameters:
+          key (string), optional, default: 
+ - remap
+      Description: Change (reorder & filter) the header to the given list of metrics
+      Parameters:
+          header (list(string)), required
+ - rename
+      Description: Find the keys (regexes) in every metric name and replace the matched parts with the given values
+      Parameters:
+          metrics (map(string)), required
+ - resend
+      Description: If no new sample is received within the given period of time, resend a copy of it.
+      Parameters:
+          interval (duration), required
+ - run-on-tag-change
+      Description: Execute a program whenever values new values for a given tag are detected or expired. Parameters will be: [expired|updated] <tag> <all current tags>...
+      Parameters:
+          exec (string), required
+          args (list(string)), optional, default: []
+          preserve-stdout (bool), optional, default: false
+          tag (string), required
+          update-after (duration), optional, default: 2m0s
+          expire-after (duration), optional, default: 15s
+          expire-on-close (bool), optional, default: false
+ - set_time
+      Description: Set the timestamp on every processed sample to the current time
+ - skip
+      Description: Drop a number of samples in the beginning
+      Parameters:
+          num (int), required
+ - sleep
+      Description: Between every two samples, sleep the time difference between their timestamps
+      Parameters:
+          time (duration), optional, default: 0s. Description: Optionally defines a fixed sleep duration
+          onChangedTag (string), optional, default: . Description: When defined, sleep only when a new value is observed for the given tag
+                                                                   The default is to sleep after each sample
+ - slope
+      Description: Add a slope metric for every incoming metric.
+      Parameters:
+          windowDuration (duration), optional, default: 0s
+          windowSize (int), optional, default: 0
+          useCurrentTime (bool), optional, default: false
+ - sphere
+      Description: Treat every sample as the center of a multi-dimensional sphere, and output a number of random points on the hull of the resulting sphere. The radius can either be fixed or given as one of the metrics
+      Parameters:
+          points (int), required
+          seed (int), optional, default: 1
+          radius (float), optional, default: 0
+          radius_metric (int), optional, default: -1
+ - split
+      Description: Metrics that are matched by the regex will be converted to separate samples. When the regex contains named groups, their names and values will be added as tags, and an individual samples will be created for each unique value combination.
+      Parameters:
+          regex (string), required
+ - stats
+      Description: Output statistics about processed samples to a given ini-file
+      Parameters:
+          file (string), required
+ - strip
+      Description: Remove all metrics, only keeping the timestamp and the tags of each sample
+ - subprocess
+      Description: Start a subprocess for processing samples. Samples will be sent/received over std in/out in the given format.
+      Parameters:
+          endpoint-config (map(string)), optional, default: map[]
+          cmd (string), required
+          format (string), optional, default: bin
+ - synchronize
+      Description: Synchronize the number of samples going through each synchronize() step with the same key parameter
+      Parameters:
+          key (string), required
+          buf (int), optional, default: 5
+ - synchronize_tags
+      Description: Split samples into streams identified by a given tag,
+      Parameters:
+          reference (string), required
+          num (int), required
+          identifier (string), required
+ - tag-pauses
+      Description: Set a given tag to an integer value, that increments whenever the timestamps of two samples are more apart than a given duration
+      Parameters:
+          tag (string), required
+          minPause (duration), required
+ - tags
+      Description: Set the given tags on every sample
+      Parameters:
+          tags (map(string)), required
+Batch processing steps:
+ - aggregate
+      Description: Aggregates sample batch to single sample by applying the operation defined by 'type' parameter respectively on each value
+      Parameters:
+          type (string), required
+ - convex_hull
+      Description: Filter out the convex hull for a two-dimensional batch of samples
+ - convex_hull_sort
+      Description: Sort a two-dimensional batch of samples in order around their center
+ - fft
+      Description: Compute a radix-2 FFT on every metric of the batch. Output the real and imaginary parts of the result
+ - filter_variance
+      Description: Filter out the metrics with a variance lower than the given threshold (based on the weighted stddev of the population, stddev/mean)
+      Parameters:
+          min (float), required
+ - pca
+      Description: Create a PCA model of a batch of samples and project all samples into a number of principal components with a total contained variance given by the parameter
+      Parameters:
+          var (float), required
+ - pca_load
+      Description: Load a PCA model from the given file and project all samples into a number of principal components with a total contained variance given by the parameter
+      Parameters:
+          var (float), required
+          file (string), required
+ - pca_store
+      Description: Create a PCA model of a batch of samples and store it to the given file
+      Parameters:
+          file (string), required
+ - rms
+      Description: Compute the Root Mean Square value for every metric in a data batch. Output a single sample with all values.
+ - scale_min_max
+      Description: Normalize a batch of samples using a min-max scale. The output value range is 0..1 by default, but can be customized.
+      Parameters:
+          min (float), optional, default: 0
+          max (float), optional, default: 1
+ - shuffle
+      Description: Shuffle a batch of samples to a random ordering
+ - sort
+      Description: Sort a batch of samples based on the values of the given comma-separated tags. The default criterion is the timestamp.
+      Parameters:
+          tags (list(string)), optional, default: []
+ - standardize
+      Description: Normalize a batch of samples based on the mean and std-deviation
+Forks:
+ - fork_tag
+      Description: Fork based on the values of the given tag
+      Parameters:
+          exact (bool), optional, default: false
+          tag (string), required
+          regex (bool), optional, default: false
+ - fork_tag_template
+      Description: Fork based on a template string, placeholders like ${xxx} are replaced by tag values.
+      Parameters:
+          template (string), required
+          regex (bool), optional, default: false
+          exact (bool), optional, default: false
+ - multiplex
+      Description: Basic fork forwarding samples to all subpipelines. Subpipeline keys are ignored.
+ - rr
+      Description: The round-robin fork distributes the samples to the subpipelines based on weights. The pipeline selector keys must be positive integers denoting the weight of the respective pipeline.
+
