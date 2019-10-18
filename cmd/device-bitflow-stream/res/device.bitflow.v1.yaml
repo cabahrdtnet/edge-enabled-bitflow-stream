@@ -1,0 +1,215 @@
+name: "Bitflow-Script-Execution-Engine"
+manufacturer: "TUB-FakIV-CIT"
+model: "device-bitflow-stream-v1"
+labels:
+  - "device-bitflow-stream"
+description: "Device that executes bitflow scripts."
+
+deviceResources:
+  -
+    name: "action"
+    description: "manually start and stop a script execution engine"
+    properties:
+      value:
+        { type: "String", readWrite: "R", defaultValue: ""}
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "contents"
+    description: "file contents of script which will be executed on the device"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: ""}
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "devices"
+    description: "device list as placeholder whose readings are streamed to the script"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "value_descriptors"
+    description: "value descriptor list whose readings are streamed to the script"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "actuation_device_name"
+    description: "name of another device that is acted upon"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "command_name"
+    description: "name of command of actuation_device that is executed if the actuation_condition is fulfilled"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "command_body"
+    description: "command_body of command with command_name of actuation_device that is executed if the actuation_condition is fulfilled"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "actuation_left_operand"
+    description: "left operand of dyadic actuation operator"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "actuation_operator"
+    description: "dyadic actuation operator describes condition when to act on actuation_device, i.e. call above command"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "actuation_right_operand"
+    description: "right operand of dyadic actuation operator"
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: "" }
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+  -
+    name: "condition"
+    description: "go function with signature: func offload() string, returning local or remote "
+    properties:
+      value:
+        { type: "String", readWrite: "W", defaultValue: ""}
+      units:
+        { type: "String", readWrite: "R", defaultValue: "" }
+
+deviceCommands:
+  -
+    name: "control"
+    set:
+      - { operation: "set", object: "action", parameter: "action" }
+
+  -
+    name: "script"
+    set:
+      - { operation: "set", object: "contents", parameter: "contents" }
+
+  -
+    name: "source"
+    set:
+      - { index: "1", operation: "set", object: "devices", parameter: "devices" }
+      - { index: "2", operation: "set", object: "value_descriptors", parameter: "value_descriptors" }
+
+  -
+    name: "actuation"
+    set:
+      - { index: "1", operation: "set", object: "actuation_device_name", parameter: "actuation_device_name" }
+      - { index: "2", operation: "set", object: "command_name", parameter: "command_name" }
+      - { index: "3", operation: "set", object: "command_body", parameter: "command_body" }
+      - { index: "4", operation: "set", object: "actuation_left_operand", parameter: "actuation_left_operand" }
+      - { index: "5", operation: "set", object: "actuation_operator", parameter: "actuation_operator" }
+      - { index: "6", operation: "set", object: "actuation_right_operand", parameter: "actuation_right_operand" }
+
+  -
+    name: "offloading"
+    set:
+      - { index: "1", operation: "set", object: "condition", parameter: "condition" }
+
+# TODO think about correct http codes
+coreCommands:
+  -
+    name: "control"
+    put:
+      path: "/api/v1/device/{deviceId}/control"
+      parameterNames: ["action"]
+      responses:
+        -
+          code: "204"
+          description: "start or stop bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
+  -
+    name: "script"
+    put:
+      path: "/api/v1/device/{deviceId}/script"
+      parameterNames: ["contents"]
+      responses:
+        -
+          code: "204"
+          description: "load script into bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
+  -
+    name: "source"
+    put:
+      path: "/api/v1/device/{deviceId}/source"
+      parameterNames: ["devices","value_descriptors"]
+      responses:
+        -
+          code: "204"
+          description: "device name and value descriptor list, special syntax for device profile starting device with device_profile:"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
+  -
+    name: "actuation"
+    put:
+      path: "/api/v1/device/{deviceId}/actuation"
+      parameterNames: ["actuation_device_name", "command_name", "command_body", "actuation_left_operand", "actuation_operator", "actuation_right_operand"]
+      responses:
+        -
+          code: "204"
+          description: "configure actuation (command, device, condition) of script in bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
+
+  -
+    name: "offloading"
+    put:
+      path: "/api/v1/device/{deviceId}/offloading"
+      parameterNames: ["condition"]
+      responses:
+        -
+          code: "204"
+          description: "configure offloading condition of script in bitflow script execution engine"
+          expectedValues: []
+        -
+          code: "500"
+          description: "internal server error"
+          expectedValues: []
